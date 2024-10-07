@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Скачивалка</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Скачать книгу в PDF</h2>
+
+    <div id="compression-container">
+      <label for="compression">Качество (в %):</label>
+      <input type="range" id="compression" class="quality-slider" min="10" max="100" step="5" value="75">
+      <span id="quality-value" class="quality-value">75%</span>
+    </div>
+
+    <div class="page-range-container">
+      <div class="page-range">
+        <label for="start-page">C</label>
+        <input type="number" id="start-page" min="1" value="1">
+        <span>страницы</span>
+      </div>
+      <div class="page-range">
+        <label for="end-page">По</label>
+        <input type="number" id="end-page" min="1" value="1">
+        <span>страницу</span>
+      </div>
+    </div>
+
+    <div id="delete-options-container">
+      <label id="higher">Выберите действие после загрузки:</label>
+  
+      <div class="radio-option">
+        <input type="radio" id="delete-none" name="delete-option" value="none" checked>
+        <label for="delete-none">Ничего не удалять</label>
+      </div>
+
+      <div class="radio-option">
+        <input type="radio" id="delete-range" name="delete-option" value="range">
+        <label for="delete-range">Удалить страницы в выбранном диапазоне</label>
+      </div>
+
+      <div class="radio-option">
+        <input type="radio" id="delete-all" name="delete-option" value="all">
+        <label for="delete-all">Удалить всю книгу</label>
+      </div>
+    </div>
+
+    <button id="start-download">Начать загрузку</button>
+
+    <div id="progress-container">
+      <div class="progress-circle">
+        <svg id="progress-ring">
+          <circle cx="75" cy="75" r="65" stroke-width="8" fill="transparent" stroke="#ccc"></circle>
+          <circle id="progress-ring-circle" cx="75" cy="75" r="65" stroke-width="8" fill="transparent" stroke="#4caf50" stroke-dasharray="408" stroke-dashoffset="408"></circle>
+        </svg>
+        <span class="progress-text" id="progress-text">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
