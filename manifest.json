@@ -23,12 +23,12 @@
   "content_scripts": [
     {
       "matches": ["https://znanium.ru/*"],
-      "js": ["content.js", "libs/jspdf.min.js"]
+      "js": ["content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/jspdf.min.js"],
+      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js"],
       "matches": ["https://znanium.ru/*"]
     }
   ]

@@ -1,5 +1,5 @@
 html, body {
-  min-width: 300px; 
+  min-width: 300px;
   min-height: 350px;
   height: 100vh;
   margin: 0;
@@ -67,7 +67,7 @@ button {
 }
 
 button:hover {
-  background-color: #45a049;
+  background-color: #45a049; 
 }
 
 .progress-circle {
@@ -78,7 +78,7 @@ button:hover {
 }
 
 .progress-circle svg {
-  width: 150px; 
+  width: 150px;
   height: 150px;
   transform: rotate(-90deg);
 }
@@ -86,15 +86,15 @@ button:hover {
 #progress-ring circle {
   cx: 75; 
   cy: 75;
-  r: 65; 
+  r: 65;
   stroke-width: 8;
   fill: transparent;
 }
 
 #progress-ring-circle {
-  cx: 75;
+  cx: 75; 
   cy: 75;
-  r: 65; 
+  r: 65;
   stroke-width: 8;
   fill: transparent;
   stroke: #4caf50;
@@ -160,7 +160,7 @@ input::-webkit-inner-spin-button {
 .page-range label {
   margin-right: 7px;
   width: 20px; 
-  text-align: left; 
+  text-align: left;
 }
 
 .page-range span {
@@ -178,7 +178,7 @@ input::-webkit-inner-spin-button {
   flex-grow: 1;
   margin-left: 10px;
   margin-right: 10px;
-  min-width: 100px; 
+  min-width: 100px;
 }
 
 .quality-value {
@@ -187,7 +187,7 @@ input::-webkit-inner-spin-button {
 }
 
 button:disabled {
-  background-color: #888; 
+  background-color: #888;
   cursor: not-allowed; 
 }
 
