@@ -22,14 +22,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://znanium.ru/*"],
-      "js": ["content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js"]
+      "matches": ["*://znanium.ru/read?id=*"],
+      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js"],
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js"],
-      "matches": ["https://znanium.ru/*"]
+      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/inject.js"],
+      "matches": ["*://znanium.ru/*"]
     }
   ]
 }

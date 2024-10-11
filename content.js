@@ -19,6 +19,7 @@ function loadBlobStream() {
 }
 
 async function startDownload(compressionQuality, deleteRecords, startPage, endPage) {
+    const offset = document.getElementById('hiddenData').value;
     const PDFDocument = await loadPDFKit();
     const blobStream = await loadBlobStream();
     const bookNumber = getBookIdFromURL();
@@ -40,7 +41,7 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
             if (cursor) {
                 let key = cursor.key;
                 let record = cursor.value;
-                let pageNumber = parseInt(key.split(':')[1], 10) - 1;
+                let pageNumber = parseInt(key.split(':')[1], 10) - offset;
                 if (key.startsWith(`${bookNumber}:`) && (pageNumber >= startPage && pageNumber <= endPage)) {
                     pagesData.push({ pageNumber, slices: record.slices, key });
                     totalProcessedPages++;
@@ -54,7 +55,7 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
                     return;
                 }
                 pagesData.sort((a, b) => a.pageNumber - b.pageNumber);
-                processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage);
+                processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage, offset);
             }
         };
         cursorRequest.onerror = function() {
@@ -63,7 +64,7 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
     };
 }
 
-async function processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage) {
+async function processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage, offset) {
     const doc = new PDFDocument({ autoFirstPage: false });
     const stream = doc.pipe(blobStream());
     try {
@@ -117,7 +118,7 @@ async function processPages(pagesData, compressionQuality, deleteRecords, db, bo
     if (deleteRecords === 1) {
         deleteAllBookRecords(db, bookNumber);
     } else if (deleteRecords === 2) {
-        deleteRangeRecords(db, bookNumber, startPage, endPage);
+        deleteRangeRecords(db, bookNumber, startPage, endPage, offset);
     }
 }
 
@@ -144,7 +145,7 @@ function deleteAllBookRecords(db, bookNumber) {
     };
 }
 
-function deleteRangeRecords(db, bookNumber, startPage, endPage) {
+function deleteRangeRecords(db, bookNumber, startPage, endPage, offset) {
     let transaction = db.transaction(['page'], 'readwrite');
     let objectStore = transaction.objectStore('page');
     let cursorRequest = objectStore.openCursor();
@@ -152,7 +153,7 @@ function deleteRangeRecords(db, bookNumber, startPage, endPage) {
         let cursor = event.target.result;
         if (cursor) {
             let key = cursor.key;
-            let pageNumber = parseInt(key.split(':')[1], 10) - 1;
+            let pageNumber = parseInt(key.split(':')[1], 10) - offset;
             if (key.startsWith(`${bookNumber}:`) && pageNumber >= startPage && pageNumber <= endPage) {
                 objectStore.delete(key).onsuccess = function() {
                     console.log(`Page ${key} deleted.`);

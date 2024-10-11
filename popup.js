@@ -58,7 +58,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 });
 
-window.onload = function() {
+window.onload = function () {
     chrome.storage.local.get(['compression', 'deleteOption'], function(data) {
         if (data.compression !== undefined) {
             document.getElementById('compression').value = data.compression * 100;
@@ -82,7 +82,6 @@ window.onload = function() {
                 totalPages = results[0].result;
                 document.getElementById('end-page').value = totalPages;
                 document.getElementById('end-page').setAttribute('max', totalPages);
-
                 isDataLoaded = true;
                 validatePageRange();
             });
@@ -147,3 +146,4 @@ document.querySelectorAll('input[name="delete-option"]').forEach((radio) => {
         }
     });
 });
+
