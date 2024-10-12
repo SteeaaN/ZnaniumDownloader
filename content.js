@@ -116,58 +116,40 @@ async function processPages(pagesData, compressionQuality, deleteRecords, db, bo
         link.click();
     });
     if (deleteRecords === 1) {
-        deleteAllBookRecords(db, bookNumber);
+        deleteBookRecords(db, bookNumber);
     } else if (deleteRecords === 2) {
-        deleteRangeRecords(db, bookNumber, startPage, endPage, offset);
+        deleteBookRecords(db, bookNumber, startPage, endPage, offset);
     }
 }
 
-function deleteAllBookRecords(db, bookNumber) {
+function deleteBookRecords(db, bookNumber, startPage, endPage, offset){
     let transaction = db.transaction(['page'], 'readwrite');
     let objectStore = transaction.objectStore('page');
     let cursorRequest = objectStore.openCursor();
-    cursorRequest.onsuccess = function(event) {
+    cursorRequest.onsuccess = function (event) {
         let cursor = event.target.result;
         if (cursor) {
             let key = cursor.key;
-            if (key.startsWith(`${bookNumber}:`)) {
-                objectStore.delete(key).onsuccess = function() {
+            let pageNumber = 0
+            let status = false
+            if (bookNumber !== undefined && startPage !== undefined && offset !== undefined) {
+                let pageNumber = parseInt(key.split(':')[1], 10) - offset;
+                status = pageNumber >= startPage && pageNumber <= endPage
+            } else {
+                status = true
+            }
+            if (key.startsWith(`${bookNumber}:`) && status) {
+                objectStore.delete(key).onsuccess = function () {
                     console.log(`Record ${key} deleted.`);
                 };
             }
-            cursor.continue();
+            cursor.continue()
         }
-    };
-    cursorRequest.onerror = function() {
-        console.log(cursorRequest.error);
-        alert('Ошибка при работе с базой данных');
-        return;
-    };
-}
-
-function deleteRangeRecords(db, bookNumber, startPage, endPage, offset) {
-    let transaction = db.transaction(['page'], 'readwrite');
-    let objectStore = transaction.objectStore('page');
-    let cursorRequest = objectStore.openCursor();
-    cursorRequest.onsuccess = function(event) {
-        let cursor = event.target.result;
-        if (cursor) {
-            let key = cursor.key;
-            let pageNumber = parseInt(key.split(':')[1], 10) - offset;
-            if (key.startsWith(`${bookNumber}:`) && pageNumber >= startPage && pageNumber <= endPage) {
-                objectStore.delete(key).onsuccess = function() {
-                    console.log(`Page ${key} deleted.`);
-                };
-            }
-            cursor.continue();
-        }
-    };
-
-    cursorRequest.onerror = function() {
-        console.log(cursorRequest.error);
-        alert('Ошибка при работе с базой данных');
-        return;
-    };
+        cursorRequest.onerror = function () {
+            console.log(cursorRequest.error);
+            alert('Ошибка при удалении книги');
+        };
+    }
 }
 
 function loadImage(src) {
