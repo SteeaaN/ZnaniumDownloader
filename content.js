@@ -20,7 +20,7 @@ function loadBlobStream() {
 
 async function startDownload(compressionQuality, deleteRecords, startPage, endPage) {
     const offset = document.getElementById('hiddenData').value;
-    const PDFDocument = await loadPDFKit();
+    await loadPDFKit();
     const blobStream = await loadBlobStream();
     const bookNumber = getBookIdFromURL();
     if (!bookNumber) {
@@ -43,7 +43,7 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
                 let record = cursor.value;
                 let pageNumber = parseInt(key.split(':')[1], 10) - offset;
                 if (key.startsWith(`${bookNumber}:`) && (pageNumber >= startPage && pageNumber <= endPage)) {
-                    pagesData.push({ pageNumber, slices: record.slices, key });
+                    pagesData.push({ pageNumber, slices: record.slices});
                     totalProcessedPages++;
                     const progressPercentage = Math.round(((totalProcessedPages) / totalExpectedPages) * 100);
                     updateProgress(progressPercentage, 1);
@@ -52,25 +52,28 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
             } else {
                 if (totalProcessedPages < totalExpectedPages) {
                     alert('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте заново скачать книгу.');
+                    updateProgress()
                     return;
                 }
                 pagesData.sort((a, b) => a.pageNumber - b.pageNumber);
-                processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage, offset);
+                processPages(pagesData, db, bookNumber, blobStream, offset, [compressionQuality, startPage, endPage, deleteRecords]);
             }
         };
         cursorRequest.onerror = function() {
             console.log('Error opening cursor:', cursorRequest.error);
+            alert('Ошибка при работе с базой данных')
+            updateProgress()
         };
     };
 }
 
-async function processPages(pagesData, compressionQuality, deleteRecords, db, bookNumber, blobStream, startPage, endPage, offset) {
+async function processPages(pagesData, db, bookNumber, blobStream, offset, settings) {
     const doc = new PDFDocument({ autoFirstPage: false });
     const stream = doc.pipe(blobStream());
     try {
         for (let i = 0; i < pagesData.length; i++) {
             const pageData = pagesData[i];
-            const { slices, pageNumber, key } = pageData;
+            const { slices } = pageData;
             if (slices.length > 0) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
@@ -92,7 +95,7 @@ async function processPages(pagesData, compressionQuality, deleteRecords, db, bo
                     ctx.drawImage(img, 0, y);
                     y += sliceHeights[j];
                 }
-                let imgData = canvas.toDataURL('image/jpeg', compressionQuality);
+                let imgData = canvas.toDataURL('image/jpeg', settings[0]);
                 const imgWidth = canvas.width;
                 const imgHeight = canvas.height;
                 doc.addPage({ size: [imgWidth, imgHeight] });
@@ -104,6 +107,7 @@ async function processPages(pagesData, compressionQuality, deleteRecords, db, bo
     } catch (saveError) {
         alert('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество.');
         console.error(saveError);
+        updateProgress()
         return;
     }
     doc.end();
@@ -115,10 +119,10 @@ async function processPages(pagesData, compressionQuality, deleteRecords, db, bo
         link.download = `${book_name}.pdf`;
         link.click();
     });
-    if (deleteRecords === 1) {
+    if (settings[3] === 1) {
         deleteBookRecords(db, bookNumber);
-    } else if (deleteRecords === 2) {
-        deleteBookRecords(db, bookNumber, startPage, endPage, offset);
+    } else if (settings[3] === 2) {
+        deleteBookRecords(db, bookNumber, settings[1], settings[2], offset);
     }
 }
 
@@ -130,7 +134,6 @@ function deleteBookRecords(db, bookNumber, startPage, endPage, offset){
         let cursor = event.target.result;
         if (cursor) {
             let key = cursor.key;
-            let pageNumber = 0
             let status = false
             if (bookNumber !== undefined && startPage !== undefined && offset !== undefined) {
                 let pageNumber = parseInt(key.split(':')[1], 10) - offset;

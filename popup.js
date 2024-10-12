@@ -6,15 +6,7 @@ document.getElementById('start-download').addEventListener('click', function () 
     const compression = parseFloat(document.getElementById('compression').value) / 100;
     const deleteOption = document.querySelector('input[name="delete-option"]:checked').value;
     const startPage = parseInt(document.getElementById('start-page').value);
-    let endPage = parseInt(document.getElementById('end-page').value);
-
-    const totalPagesElement = document.querySelector('p.number-all-page');
-    const totalPages = totalPagesElement ? parseInt(totalPagesElement.textContent) : 0;
-
-    if (isNaN(endPage) || endPage < startPage) {
-        endPage = totalPages;
-    }
-
+    const endPage = parseInt(document.getElementById('end-page').value);
     resetProgress();
     try {
         chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
@@ -36,7 +28,6 @@ function startDownloadFromContent(compression, deleteOption, startPage, endPage)
         alert("Перезагрузите страницу.");
         return;
     }
-
     if (deleteOption === 'range') {
         window.startDownload(compression, 2, startPage, endPage);
     } else if (deleteOption === 'all') {
@@ -46,7 +37,7 @@ function startDownloadFromContent(compression, deleteOption, startPage, endPage)
     }
 }
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(request) {
     if (request.action === 'updateProgress') {
         const progress = request.percentage;
         const stage = request.stage
@@ -65,10 +56,7 @@ window.onload = function () {
             document.getElementById('quality-value').textContent = data.compression * 100 + '%';
         }
         if (data.deleteOption !== undefined) {
-            const selectedRadio = document.querySelector(`input[name="delete-option"][value="${data.deleteOption}"]`);
-            if (selectedRadio) {
-                selectedRadio.checked = true;
-            }
+            document.querySelector(`input[name="delete-option"][value="${data.deleteOption}"]`).checked = true;
         } else {
             document.getElementById('delete-none').checked = true;
         }
@@ -82,13 +70,12 @@ window.onload = function () {
                 totalPages = results[0].result;
                 document.getElementById('end-page').value = totalPages;
                 document.getElementById('end-page').setAttribute('max', totalPages);
-                isDataLoaded = true;
-                validatePageRange();
             });
         });
-    } catch(error) {
+    } catch (error) {
         console.error(error)
     }
+    isDataLoaded = true;
 };
 
 function getLastPageNumber() {
@@ -109,8 +96,6 @@ function setProgress(percentage, stage) {
     progressCircle.style.strokeDashoffset = offset;
     document.getElementById('progress-text').innerHTML = `${percentage}%<br>${stage}/2`;
 }
-
-let isDataLoaded = false;
 
 function validatePageRange() {
     if (!isDataLoaded) return;
@@ -147,3 +132,5 @@ document.querySelectorAll('input[name="delete-option"]').forEach((radio) => {
     });
 });
 
+let isDataLoaded = false;
+let totalPages;
