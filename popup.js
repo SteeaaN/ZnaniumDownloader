@@ -25,7 +25,8 @@ document.getElementById('start-download').addEventListener('click', function () 
 
 function startDownloadFromContent(compression, deleteOption, startPage, endPage) {
     if (typeof window.startDownload !== 'function') {
-        alert("Перезагрузите страницу.");
+        alert("Перезагрузите страницу");
+        chrome.runtime.sendMessage({ action: 'setError', text: "Перезагрузите страницу Знаниума" });
         return;
     }
     if (deleteOption === 'range') {
@@ -45,7 +46,11 @@ chrome.runtime.onMessage.addListener(function(request) {
         if (progress >= 100 && stage !== 1) {
             document.getElementById('progress-text').textContent = 'Загрузка завершена';
             document.getElementById('start-download').disabled = false;
-        }   
+        }
+    } else if (request.action === 'setError') {
+        document.getElementById('progress-ring').style.display = 'none';
+        document.getElementById('progress-text').style.width = '200%';
+        document.getElementById('progress-text').textContent = request.text
     }
 });
 

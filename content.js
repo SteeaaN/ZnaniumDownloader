@@ -25,6 +25,7 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
     const bookNumber = getBookIdFromURL();
     if (!bookNumber) {
         alert('Номер книги не найден в ссылке.');
+        setError('Номер книги не найден в ссылке.')
         return;
     }
     let request = indexedDB.open('reader2viewer');
@@ -51,8 +52,9 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
                 cursor.continue();
             } else {
                 if (totalProcessedPages < totalExpectedPages) {
-                    alert('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте заново скачать книгу.');
                     updateProgress()
+                    alert('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте скачать книгу заново');
+                    setError('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте скачать книгу заново')
                     return;
                 }
                 pagesData.sort((a, b) => a.pageNumber - b.pageNumber);
@@ -61,8 +63,9 @@ async function startDownload(compressionQuality, deleteRecords, startPage, endPa
         };
         cursorRequest.onerror = function() {
             console.log('Error opening cursor:', cursorRequest.error);
-            alert('Ошибка при работе с базой данных')
             updateProgress()
+            alert('Ошибка при работе с базой данных')
+            setError('Ошибка при работе с базой данных')
         };
     };
 }
@@ -105,9 +108,10 @@ async function processPages(pagesData, db, bookNumber, blobStream, offset, setti
             updateProgress(progressPercentage, 2);
         }
     } catch (saveError) {
-        alert('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество.');
-        console.error(saveError);
         updateProgress()
+        alert('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество');
+        setError('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество');
+        console.error(saveError);
         return;
     }
     doc.end();
@@ -151,6 +155,7 @@ function deleteBookRecords(db, bookNumber, startPage, endPage, offset){
         cursorRequest.onerror = function () {
             console.log(cursorRequest.error);
             alert('Ошибка при удалении книги');
+            setError('Ошибка при удалении книги')
         };
     }
 }
@@ -171,6 +176,10 @@ function getBookIdFromURL() {
 
 function updateProgress(percentage, stage) {
     chrome.runtime.sendMessage({ action: 'updateProgress', percentage, stage });
+}
+
+function setError(text) {
+    chrome.runtime.sendMessage({ action: 'setError', text})
 }
 
 window.startDownload = startDownload;
