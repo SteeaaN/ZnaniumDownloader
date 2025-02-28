@@ -1,6 +1,6 @@
 html, body {
     min-width: 300px;
-    min-height: 350px;
+    min-height: 150px;
     height: 100vh;
     margin: 0;
     padding: 0;
@@ -27,15 +27,11 @@ h2 {
     text-align: center;
 }
 
-#compression-container, #page-range-container {
+#page-range-container {
     display: flex;
     align-items: center;
     width: 100%;
     justify-content: space-between;
-}
-
-#compression-container {
-  margin-bottom: 15px;
 }
 
 input[type="number"] {
@@ -145,46 +141,7 @@ input::-webkit-inner-spin-button {
     margin-left: 7px;
 }
 
-.compression-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.quality-slider {
-    flex-grow: 1;
-    margin-left: 10px;
-    margin-right: 10px;
-    min-width: 100px;
-}
-
-.quality-value {
-    width: 100px;
-    text-align: right;
-}
-
 button:disabled {
     background-color: #888;
     cursor: not-allowed; 
-}
-
-#delete-options-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.radio-option {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.radio-option input[type="radio"] {
-    margin-right: 10px;
-}
-
-#higher {
-    margin-bottom: 10px;
 }

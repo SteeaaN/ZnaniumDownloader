@@ -1,10 +1,4 @@
-document.getElementById('compression').addEventListener('input', function() {
-    document.getElementById('quality-value').textContent = this.value + '%';
-});
-
 document.getElementById('start-download').addEventListener('click', function () {
-    const compression = parseFloat(document.getElementById('compression').value) / 100;
-    const deleteOption = document.querySelector('input[name="delete-option"]:checked').value;
     const startPage = parseInt(document.getElementById('start-page').value);
     const endPage = parseInt(document.getElementById('end-page').value);
     resetProgress();
@@ -13,59 +7,46 @@ document.getElementById('start-download').addEventListener('click', function () 
             chrome.scripting.executeScript({
                 target: { tabId: tabs[0].id },
                 func: startDownloadFromContent,
-                args: [compression, deleteOption, startPage, endPage]
+                args: [startPage, endPage]
             });
             document.getElementById('progress-container').style.display = 'flex';
             document.getElementById('start-download').disabled = true;
+	    document.getElementById('start-page').disabled = true;
+    	    document.getElementById('end-page').disabled = true;
         });
     } catch(error) {
         console.error(error);
     }
 });
 
-function startDownloadFromContent(compression, deleteOption, startPage, endPage) {
+function startDownloadFromContent(startPage, endPage) {
     if (typeof window.startDownload !== 'function') {
         alert("Перезагрузите страницу");
         chrome.runtime.sendMessage({ action: 'setError', text: "Перезагрузите страницу Знаниума" });
         return;
     }
-    if (deleteOption === 'range') {
-        window.startDownload(compression, 2, startPage, endPage);
-    } else if (deleteOption === 'all') {
-        window.startDownload(compression, 1, startPage, endPage);
-    } else {
-        window.startDownload(compression, 0, startPage, endPage);
-    }
+    window.startDownload(startPage, endPage);
 }
 
 chrome.runtime.onMessage.addListener(function(request) {
     if (request.action === 'updateProgress') {
         const progress = request.percentage;
-        const stage = request.stage
+        const stage = request.stage;
         setProgress(progress, stage);
-        if (progress >= 100 && stage !== 1) {
+        if (progress >= 100 && stage === 2) {
             document.getElementById('progress-text').textContent = 'Загрузка завершена';
             document.getElementById('start-download').disabled = false;
+	    document.getElementById('start-page').disabled = false;
+    	    document.getElementById('end-page').disabled = false;
         }
     } else if (request.action === 'setError') {
         document.getElementById('progress-ring').style.display = 'none';
         document.getElementById('progress-text').style.width = '200%';
-        document.getElementById('progress-text').textContent = request.text
+        document.getElementById('progress-text').textContent = request.text;
     }
 });
 
 window.onload = function () {
-    chrome.storage.local.get(['compression', 'deleteOption'], function(data) {
-        if (data.compression !== undefined) {
-            document.getElementById('compression').value = data.compression * 100;
-            document.getElementById('quality-value').textContent = data.compression * 100 + '%';
-        }
-        if (data.deleteOption !== undefined) {
-            document.querySelector(`input[name="delete-option"][value="${data.deleteOption}"]`).checked = true;
-        } else {
-            document.getElementById('delete-none').checked = true;
-        }
-    });
     try {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             chrome.scripting.executeScript({
@@ -126,16 +107,6 @@ function validatePageRange() {
 
 document.getElementById('start-page').addEventListener('input', validatePageRange);
 document.getElementById('end-page').addEventListener('input', validatePageRange);
-document.getElementById('compression').addEventListener('change', function() {
-  chrome.storage.local.set({ compression: parseFloat(this.value) / 100 });
-});
-document.querySelectorAll('input[name="delete-option"]').forEach((radio) => {
-    radio.addEventListener('change', function() {
-        if (this.checked) {
-            chrome.storage.local.set({ deleteOption: this.value });
-        }
-    });
-});
 
 let isDataLoaded = false;
 let totalPages;

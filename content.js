@@ -18,102 +18,153 @@ function loadBlobStream() {
     });
 }
 
-async function startDownload(compressionQuality, deleteRecords, startPage, endPage) {
-    const offset = document.getElementById('hiddenData').value;
+function getDecryptionKey() {
+    const renderVerInput = document.querySelector('#render-ver');
+    return renderVerInput.value.split(':')[0];
+}
+
+
+async function getValidJWT(pageNumber) {
+    return new Promise((resolve, reject) => {
+        function messageHandler(event) {
+            if (event.source !== window) return;
+            if (event.data.action === "jwtResponse") {
+                window.removeEventListener("message", messageHandler);
+                resolve(event.data.jwt);
+            } else if (event.data.action === "jwtError") {
+                window.removeEventListener("message", messageHandler);
+                reject(new Error(event.data.error));
+            }
+        }
+        window.addEventListener("message", messageHandler);
+        window.postMessage({ action: "getJwt", pageNumber }, "*");
+    });
+}
+
+function decryptSVG(encryptedSVG, crkey) {
+    let digitOrd = { 0: 48, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54, 7: 55, 8: 56, 9: 57 };
+    let digitChr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    let key = Array.from(crkey).map(c => c.charCodeAt(0)).join("");
+    let e = key.length, h = 0, decrypted = "", startDecrypt = false;
+    for (let g = 0; g < encryptedSVG.length; g++) {
+        if (encryptedSVG[g] in digitOrd && startDecrypt) {
+            let r = parseInt(encryptedSVG[g], 10) - parseInt(key[h], 10);
+            if (r < 0) r += 10;
+            decrypted += digitChr[r];
+            h = (h + 1) % e;
+        } else {
+            decrypted += encryptedSVG[g];
+            if (encryptedSVG[g] === ">") startDecrypt = true;
+        }
+    }
+    return decrypted;
+}
+
+async function fetchPage(bookId, pageNumber, jwt) {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+            { action: "fetchPage", bookId, pageNumber, jwt },
+            (response) => {
+                if (!response?.success) {
+                    reject(new Error(response?.error || "Неизвестная ошибка"));
+                    return;
+                }
+                let parser = new DOMParser();
+                let xmlDoc = parser.parseFromString(response.data, "text/xml");
+                let bookpageElement = xmlDoc.querySelector("bookpage");
+
+                if (!bookpageElement || !bookpageElement.textContent.trim()) {
+                    reject(new Error("SVG не найден"));
+                    return;
+                }
+                let rawSVG = bookpageElement.textContent.trim();
+		window.postMessage({ action: "keepAlive" }, "*");
+                resolve(rawSVG);
+            }
+        );
+    });
+}
+
+async function startDownload(startPage, endPage) {
     await loadPDFKit();
     const blobStream = await loadBlobStream();
     const bookNumber = getBookIdFromURL();
     if (!bookNumber) {
         alert('Номер книги не найден в ссылке.');
-        setError('Номер книги не найден в ссылке.')
+        setError('Номер книги не найден в ссылке.');
         return;
     }
-    let request = indexedDB.open('reader2viewer');
-    request.onsuccess = function(event) {
-        let db = event.target.result;
-        let transaction = db.transaction(['page'], 'readonly');
-        let objectStore = transaction.objectStore('page');
-        let cursorRequest = objectStore.openCursor();
-        const pagesData = [];
-        let totalProcessedPages = 0;
-        let totalExpectedPages = endPage - startPage + 1;
-        cursorRequest.onsuccess = function(event) {
-            let cursor = event.target.result;
-            if (cursor) {
-                let key = cursor.key;
-                let record = cursor.value;
-                let pageNumber = parseInt(key.split(':')[1], 10) - offset;
-                if (key.startsWith(`${bookNumber}:`) && (pageNumber >= startPage && pageNumber <= endPage)) {
-                    pagesData.push({ pageNumber, slices: record.slices});
-                    totalProcessedPages++;
-                    const progressPercentage = Math.round(((totalProcessedPages) / totalExpectedPages) * 100);
-                    updateProgress(progressPercentage, 1);
-                }
-                cursor.continue();
-            } else {
-                if (totalProcessedPages < totalExpectedPages) {
-                    updateProgress()
-                    alert('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте скачать книгу заново');
-                    setError('Некоторые страницы книги не загружены. Перезагрузите страницу или попробуйте скачать книгу заново')
-                    return;
-                }
-                pagesData.sort((a, b) => a.pageNumber - b.pageNumber);
-                processPages(pagesData, db, bookNumber, blobStream, offset, [compressionQuality, startPage, endPage, deleteRecords]);
-            }
-        };
-        cursorRequest.onerror = function() {
-            console.log('Error opening cursor:', cursorRequest.error);
-            updateProgress()
-            alert('Ошибка при работе с базой данных')
-            setError('Ошибка при работе с базой данных')
-        };
-    };
+    const decryptionKey = getDecryptionKey();
+    let pagesData = [];
+    let totalPages = endPage - startPage + 1;
+    let processedPages = 0;
+    for (let page = startPage; page <= endPage; page++) {
+        try {
+            let jwt = await getValidJWT(page);
+            let pageData = await fetchPage(bookNumber, page, jwt);
+            pagesData.push({
+                pageNumber: page,
+                svgData: pageData,
+                key: decryptionKey
+            });
+            processedPages++;
+            let progress = Math.round((processedPages / totalPages) * 100);
+	    if (progress === 100 && processedPages < totalPages) {
+    		progress = 99;
+	    }
+	    updateProgress(progress, 1);
+        } catch (err) {
+	    console.error(err);
+	    alert('Ошибка при скачивании');
+            setError('Ошибка при скачивании');
+	    return
+        }
+    }
+
+    processPages(pagesData, bookNumber, blobStream);
 }
 
-async function processPages(pagesData, db, bookNumber, blobStream, offset, settings) {
+async function processPages(pagesData, bookNumber, blobStream) {
     const doc = new PDFDocument({ autoFirstPage: false });
     const stream = doc.pipe(blobStream());
+    let totalPages = pagesData.length;
+    let processedPages = 0;
     try {
         for (let i = 0; i < pagesData.length; i++) {
-            const pageData = pagesData[i];
-            const { slices } = pageData;
-            if (slices.length > 0) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const validSlices = slices.filter(slice => slice !== null);
-                const firstImg = await loadImage(validSlices[0]);
-                canvas.width = firstImg.width;
-                let totalHeight = 0;
-                const sliceHeights = [];
-                for (const slice of validSlices) {
-                    const img = await loadImage(slice);
-                    totalHeight += img.height;
-                    sliceHeights.push(img.height);
-                }
-                canvas.height = totalHeight;
-                let y = 0;
-                for (let j = 0; j < validSlices.length; j++) {
-                    const img = await loadImage(validSlices[j]);
-                    ctx.drawImage(img, 0, y);
-                    y += sliceHeights[j];
-                }
-                let imgData = canvas.toDataURL('image/jpeg', settings[0]);
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                doc.addPage({ size: [imgWidth, imgHeight] });
-                doc.image(imgData, 0, 0, { width: imgWidth, height: imgHeight });
-              }
-              const progressPercentage = Math.round(((i + 1) / pagesData.length) * 100);
-            updateProgress(progressPercentage, 2);
+            const { svgData, key, pageNumber } = pagesData[i];
+            let decryptedSVG = decryptSVG(svgData, key);
+            let tempDiv = document.createElement("div");
+            tempDiv.innerHTML = decryptedSVG.trim();
+            let svgElement = tempDiv.firstChild;
+            let viewBox = svgElement.getAttribute("viewBox");
+            let width, height;
+            if (viewBox) {
+                let parts = viewBox.split(" ").map(parseFloat);
+                width = parts[2];
+                height = parts[3];
+            } else {
+                width = parseFloat(svgElement.getAttribute("width"));
+                height = parseFloat(svgElement.getAttribute("height"));
+            }
+            doc.addPage({ size: [width, height] });
+	    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+	    svgElement.setAttribute("width", width);
+	    svgElement.setAttribute("height", height);
+            SVGtoPDF(doc, decryptedSVG, 0, 0, { preserveAspectRatio: 'none' });
+            processedPages++;
+            let progress = Math.round((processedPages / totalPages) * 100);
+	    if (progress === 100 && processedPages < totalPages) {
+    		progress = 99;
+	    }
+	    updateProgress(progress, 2);
         }
-    } catch (saveError) {
-        updateProgress()
-        alert('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество');
-        setError('Произошла ошибка при сохранении PDF-файла. Попробуйте уменьшить качество');
-        console.error(saveError);
+    } catch (error) {
+        alert('Ошибка при сохранении PDF.');
+        setError('Ошибка при сохранении PDF.');
+        console.error(error);
         return;
     }
+
     doc.end();
     stream.on('finish', function() {
         const blob = stream.toBlob('application/pdf');
@@ -123,63 +174,18 @@ async function processPages(pagesData, db, bookNumber, blobStream, offset, setti
         link.download = `${book_name}.pdf`;
         link.click();
     });
-    if (settings[3] === 1) {
-        deleteBookRecords(db, bookNumber);
-    } else if (settings[3] === 2) {
-        deleteBookRecords(db, bookNumber, settings[1], settings[2], offset);
-    }
-}
-
-function deleteBookRecords(db, bookNumber, startPage, endPage, offset){
-    let transaction = db.transaction(['page'], 'readwrite');
-    let objectStore = transaction.objectStore('page');
-    let cursorRequest = objectStore.openCursor();
-    cursorRequest.onsuccess = function (event) {
-        let cursor = event.target.result;
-        if (cursor) {
-            let key = cursor.key;
-            let status = false
-            if (bookNumber !== undefined && startPage !== undefined && offset !== undefined) {
-                let pageNumber = parseInt(key.split(':')[1], 10) - offset;
-                status = pageNumber >= startPage && pageNumber <= endPage
-            } else {
-                status = true
-            }
-            if (key.startsWith(`${bookNumber}:`) && status) {
-                objectStore.delete(key).onsuccess = function () {
-                    console.log(`Record ${key} deleted.`);
-                };
-            }
-            cursor.continue()
-        }
-        cursorRequest.onerror = function () {
-            console.log(cursorRequest.error);
-            alert('Ошибка при удалении книги');
-            setError('Ошибка при удалении книги')
-        };
-    }
-}
-
-function loadImage(src) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('loadImage'));
-    });
-}
-
-function getBookIdFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id');
 }
 
 function updateProgress(percentage, stage) {
     chrome.runtime.sendMessage({ action: 'updateProgress', percentage, stage });
 }
 
+function getBookIdFromURL() {
+    return new URLSearchParams(window.location.search).get('id');
+}
+
 function setError(text) {
-    chrome.runtime.sendMessage({ action: 'setError', text})
+    chrome.runtime.sendMessage({ action: 'setError', text });
 }
 
 window.startDownload = startDownload;

@@ -1,8 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Znanium PDF Downloader",
-  "version": "1.0",
-  "permissions": ["storage", "activeTab", "scripting", "downloads"],
+  "version": "0.9",
+  "permissions": [
+    "webRequest",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://znanium.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Download book from cache",
@@ -23,13 +30,13 @@
   "content_scripts": [
     {
       "matches": ["*://znanium.ru/read?id=*"],
-      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js"],
+      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js"],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/inject.js"],
+      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/inject.js", "libs/SVG-to-PDFKit.js"],
       "matches": ["*://znanium.ru/*"]
     }
   ]
