@@ -2,17 +2,32 @@
     console.log('injected');
 
     window.addEventListener("message", (event) => {
-        if (event.source !== window || event.data.action !== "getJwt") return;
-
+        if (event.source !== window || event.data.action !== "getPage") return;
         try {
-            let jwt = window.readercontrols?.reader?.reader?.makeAuthorizationKey(event.data.pageNumber, 0);
-            if (jwt) {
-                window.postMessage({ action: "jwtResponse", jwt }, "*");
-            } else {
-                window.postMessage({ action: "jwtError", error: "makeAuthorizationKey вернул null" }, "*");
-            }
+            let jwt = window.readercontrols.reader.reader.makeAuthorizationKey(event.data.pageNumber, true);
+            const url = `https://znanium.ru/read/page?doc=${event.data.bookId}&page=${event.data.pageNumber}&current=1&d=&t=svg`;
+	    const b = function(response) {
+		const xmlString = new XMLSerializer().serializeToString(response);
+	        window.postMessage({ action: "pageResponse", page: xmlString }, "*");
+            };
+            const k = function(jqXHR, textStatus, errorThrown) {
+		window.postMessage({ action: "pageError", error: `Ошибка загрузки страницы ${event.data.pageNumber}: ${textStatus} - ${errorThrown}` }, "*");
+            };
+            $.ajax({
+                method: "GET",
+                dataType: "xml",
+                url: url,
+                async: true,
+                crossDomain: true,
+                xhrFields: { withCredentials: true },
+                beforeSend: function (e) {
+                    e.setRequestHeader("Authorization", "Bearer " + jwt);
+                },
+                success: b,
+                error: k
+            });
         } catch (error) {
-            window.postMessage({ action: "jwtError", error: error.message }, "*");
+            window.postMessage({ action: "pageError", error: error.message }, "*");
         }
     });
 })();

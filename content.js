@@ -23,21 +23,24 @@ function getDecryptionKey() {
     return renderVerInput.value.split(':')[0];
 }
 
-
-async function getValidJWT(pageNumber) {
+async function requestPage(pageNumber, bookId) {
     return new Promise((resolve, reject) => {
         function messageHandler(event) {
             if (event.source !== window) return;
-            if (event.data.action === "jwtResponse") {
+            if (event.data.action === "pageResponse") {
                 window.removeEventListener("message", messageHandler);
-                resolve(event.data.jwt);
-            } else if (event.data.action === "jwtError") {
+                resolve(event.data.page);
+            } else if (event.data.action === "pageError") {
                 window.removeEventListener("message", messageHandler);
                 reject(new Error(event.data.error));
             }
         }
         window.addEventListener("message", messageHandler);
-        window.postMessage({ action: "getJwt", pageNumber }, "*");
+        window.postMessage({
+    	    action: "getPage",
+            pageNumber: pageNumber,
+    	    bookId: bookId
+        }, "*");
     });
 }
 
@@ -60,29 +63,33 @@ function decryptSVG(encryptedSVG, crkey) {
     return decrypted;
 }
 
-async function fetchPage(bookId, pageNumber, jwt) {
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(
-            { action: "fetchPage", bookId, pageNumber, jwt },
-            (response) => {
-                if (!response?.success) {
-                    reject(new Error(response?.error || "Неизвестная ошибка"));
-                    return;
-                }
-                let parser = new DOMParser();
-                let xmlDoc = parser.parseFromString(response.data, "text/xml");
-                let bookpageElement = xmlDoc.querySelector("bookpage");
+async function fetchPage(bookId, pageNumber) {
+    let attempts = 0;
+    const maxAttempts = 25;
 
-                if (!bookpageElement || !bookpageElement.textContent.trim()) {
-                    reject(new Error("SVG не найден"));
-                    return;
-                }
-                let rawSVG = bookpageElement.textContent.trim();
-		window.postMessage({ action: "keepAlive" }, "*");
-                resolve(rawSVG);
+    while (attempts < maxAttempts) {
+        try {
+            let page = await requestPage(pageNumber, bookId);
+            let parser = new DOMParser();
+            let xmlDoc = parser.parseFromString(page, "text/xml");
+            let bookpageElement = xmlDoc.querySelector("bookpage");
+
+            if (!bookpageElement || !bookpageElement.textContent.trim()) {
+                throw new Error("SVG не найден");
             }
-        );
-    });
+
+            let rawSVG = bookpageElement.textContent.trim();
+            return rawSVG;
+        } catch (error) {
+            console.log(`Ошибка при загрузке страницы ${pageNumber}, попытка ${attempts + 1}/${maxAttempts}:`, error);
+            attempts++;
+            if (attempts >= maxAttempts) {
+		alert(`Не удалось загрузить страницу ${pageNumber} после ${maxAttempts} попыток`);
+        	setError(`Не удалось загрузить страницу ${pageNumber} после ${maxAttempts} попыток`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 2500));
+        }
+    }
 }
 
 async function startDownload(startPage, endPage) {
@@ -100,8 +107,7 @@ async function startDownload(startPage, endPage) {
     let processedPages = 0;
     for (let page = startPage; page <= endPage; page++) {
         try {
-            let jwt = await getValidJWT(page);
-            let pageData = await fetchPage(bookNumber, page, jwt);
+            let pageData = await fetchPage(bookNumber, page);
             pagesData.push({
                 pageNumber: page,
                 svgData: pageData,
