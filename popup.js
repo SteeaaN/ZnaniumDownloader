@@ -1,4 +1,5 @@
 document.getElementById('start-download').addEventListener('click', function () {
+    const format = document.querySelector('input[name="format-selector"]:checked').value;
     const startPage = parseInt(document.getElementById('start-page').value);
     const endPage = parseInt(document.getElementById('end-page').value);
     resetProgress();
@@ -7,25 +8,26 @@ document.getElementById('start-download').addEventListener('click', function () 
             chrome.scripting.executeScript({
                 target: { tabId: tabs[0].id },
                 func: startDownloadFromContent,
-                args: [startPage, endPage]
+                args: [startPage, endPage, format]
             });
             document.getElementById('progress-container').style.display = 'flex';
             document.getElementById('start-download').disabled = true;
-	    document.getElementById('start-page').disabled = true;
-    	    document.getElementById('end-page').disabled = true;
+            document.getElementById('start-page').disabled = true;
+            document.getElementById('end-page').disabled = true;
         });
-    } catch(error) {
+    } catch (error) {
         console.error(error);
     }
 });
 
-function startDownloadFromContent(startPage, endPage) {
+function startDownloadFromContent(startPage, endPage, format) {
     if (typeof window.startDownload !== 'function') {
         alert("Перезагрузите страницу");
         chrome.runtime.sendMessage({ action: 'setError', text: "Перезагрузите страницу Знаниума" });
         return;
     }
-    window.startDownload(startPage, endPage);
+    chrome.runtime.sendMessage({ action: "startDownload" });
+    window.startDownload(startPage, endPage, format);
 }
 
 chrome.runtime.onMessage.addListener(function(request) {
@@ -36,8 +38,8 @@ chrome.runtime.onMessage.addListener(function(request) {
         if (progress >= 100 && stage === 2) {
             document.getElementById('progress-text').textContent = 'Загрузка завершена';
             document.getElementById('start-download').disabled = false;
-	    document.getElementById('start-page').disabled = false;
-    	    document.getElementById('end-page').disabled = false;
+            document.getElementById('start-page').disabled = false;
+            document.getElementById('end-page').disabled = false;
         }
     } else if (request.action === 'setError') {
         document.getElementById('progress-ring').style.display = 'none';
@@ -47,6 +49,12 @@ chrome.runtime.onMessage.addListener(function(request) {
 });
 
 window.onload = function () {
+    chrome.storage.local.get(['format'], function(data) {
+        if (data.format !== undefined) {
+            document.querySelector(`input[name="format-selector"][value="${data.format}"]`).checked = true;
+        }
+    });
+
     try {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             chrome.scripting.executeScript({
@@ -57,6 +65,23 @@ window.onload = function () {
                 document.getElementById('end-page').value = totalPages;
                 document.getElementById('end-page').setAttribute('max', totalPages);
             });
+
+            chrome.scripting.executeScript({
+                target: { tabId: tabs[0].id },
+                func: checkEpubAvailability,
+            }, (results) => {
+                const epubAvailable = results[0].result;
+                const epubOption = document.querySelector(`input[name="format-selector"][value="text"]`);
+                const pdfOption = document.querySelector(`input[name="format-selector"][value="svg"]`);
+                
+                if (!epubAvailable) {
+                    epubOption.disabled = true;
+                    pdfOption.checked = true;
+                } else {
+                    epubOption.disabled = false;
+                }
+            });
+
         });
     } catch (error) {
         console.error(error)
@@ -69,6 +94,10 @@ function getLastPageNumber() {
     return lastPageElement ? parseInt(lastPageElement.textContent) : 1;
 }
 
+function checkEpubAvailability() {
+    return document.querySelector('div[data-open-modal="text"]') !== null;
+}
+
 function resetProgress() {
     const progressCircle = document.getElementById('progress-ring-circle');
     progressCircle.style.strokeDashoffset = 408;
@@ -78,8 +107,7 @@ function setProgress(percentage, stage) {
     const progressCircle = document.getElementById('progress-ring-circle');
     const radius = progressCircle.r.baseVal.value;
     const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (percentage / 100) * circumference;
-    progressCircle.style.strokeDashoffset = offset;
+    progressCircle.style.strokeDashoffset = circumference - (percentage / 100) * circumference;
     document.getElementById('progress-text').innerHTML = `${percentage}%<br>${stage}/2`;
 }
 
@@ -107,6 +135,13 @@ function validatePageRange() {
 
 document.getElementById('start-page').addEventListener('input', validatePageRange);
 document.getElementById('end-page').addEventListener('input', validatePageRange);
+document.querySelectorAll('input[name="format-selector"]').forEach((radio) => {
+    radio.addEventListener('change', function() {
+        if (this.checked) {
+            chrome.storage.local.set({ format: this.value });
+        }
+    });
+});
 
 let isDataLoaded = false;
 let totalPages;

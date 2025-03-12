@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Скачать книгу в PDF</h2>
+    <h2>Скачать книгу</h2>
 
     <div class="page-range-container">
       <div class="page-range">
@@ -22,6 +22,19 @@
         <span>страницу</span>
       </div>
     </div>
+
+    <div id="format-selector-container">
+      <span id="higher">Формат:</span>
+      <div class="radio-option">
+        <input type="radio" id="pdf" name="format-selector" value="svg" checked>
+        <label for="pdf">PDF</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="epub" name="format-selector" value="text">
+        <label for="epub">ePub (текст)</label>
+      </div>
+    </div>
+
 
     <button id="start-download">Начать загрузку</button>
 

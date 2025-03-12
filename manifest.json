@@ -1,21 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "Znanium PDF Downloader",
-  "version": "0.9.1",
+  "name": "Znanium Downloader",
+  "version": "1.0.0",
   "permissions": [
+    "storage",
     "webRequest",
     "activeTab",
-    "scripting"
+    "scripting",
+    "power"
   ],
   "host_permissions": [
     "https://znanium.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Download book from cache",
+    "default_title": "Znanium Downloader",
     "default_popup_width": 260
   },
-  "description": "Загрузка книг Znanium из кэша браузера",
+  "description": "Загрузка книг Znanium в PDF и ePub",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
@@ -30,13 +32,13 @@
   "content_scripts": [
     {
       "matches": ["*://znanium.ru/read?id=*"],
-      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js"],
+      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js", "libs/jszip.min.js"],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/inject.js", "libs/SVG-to-PDFKit.js"],
+      "resources": ["libs/inject.js"],
       "matches": ["*://znanium.ru/*"]
     }
   ]

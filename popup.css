@@ -145,3 +145,24 @@ button:disabled {
     background-color: #888;
     cursor: not-allowed; 
 }
+
+#format-selector-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 10px;
+}
+
+#higher {
+    margin-bottom: 10px;
+}
