@@ -283,7 +283,7 @@ async function processPages(bookTitle, pagesData) {
             let decryptedSVG = decryptSVG(svgData, key);
             let tempDiv = document.createElement("div");
             tempDiv.innerHTML = decryptedSVG.trim();
-            let svgElement = tempDiv.firstChild;
+            let svgElement = tempDiv.querySelector("svg");
             let viewBox = svgElement.getAttribute("viewBox");
             let width, height;
             if (viewBox) {
