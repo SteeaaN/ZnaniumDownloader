@@ -104,7 +104,7 @@ async function fetchPage(bookId, pageNumber, format) {
             let pageContent = await requestPage(pageNumber, bookId, format);
             let parser = new DOMParser();
             let xmlDoc = parser.parseFromString(pageContent, "text/xml");
-            if (format === 'text') {
+            if (format === 'epub') {
                 let pageTextElement = xmlDoc.querySelector("page_text");
                 if (!pageTextElement?.textContent?.trim()) {
                     throw new Error("Текст страницы не найден");
@@ -218,7 +218,7 @@ async function generateEPUB(bookTitle, author, pages, bookId, totalPages, toc) {
             <rootfile full-path="EPUB/content.opf" media-type="application/oebps-package+xml"/>
         </rootfiles>
     </container>`);
-    const blob = await zip.generateAsync({ type: "blob" });
+    const blob = await zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${bookTitle}.epub`;
@@ -243,7 +243,7 @@ async function startDownload(startPage, endPage, format) {
             if (pageContent === undefined) {
                 return;
             }
-            if (format === "text") {
+            if (format === "epub") {
                 pagesData.push(pageContent);
             } else {
                 pagesData.push({
@@ -264,7 +264,7 @@ async function startDownload(startPage, endPage, format) {
             return;
         }
     }
-    if (format === "text") {
+    if (format === "epub") {
         const { author, toc } = await getBookMetadata(bookId);
         generateEPUB(bookTitle, author, pagesData, bookId, totalPages, toc);
     } else {

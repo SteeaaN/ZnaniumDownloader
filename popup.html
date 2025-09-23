@@ -2,52 +2,81 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width">
   <title>Скачивалка</title>
   <link rel="stylesheet" href="popup.css">
+  <script src="zoom.js"></script>
 </head>
 <body>
   <div class="container">
+    <div class="theme-toggle">
+      <input type="checkbox" id="theme-switch">
+      <label for="theme-switch">
+        <svg class="icon sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" fill="currentColor"/>
+          <line x1="12" y1="1" x2="12" y2="4" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="20" x2="12" y2="23" stroke="currentColor" stroke-width="2"/>
+          <line x1="1" y1="12" x2="4" y2="12" stroke="currentColor" stroke-width="2"/>
+          <line x1="20" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2"/>
+          <line x1="4.2" y1="4.2" x2="6.3" y2="6.3" stroke="currentColor" stroke-width="2"/>
+          <line x1="17.7" y1="17.7" x2="19.8" y2="19.8" stroke="currentColor" stroke-width="2"/>
+          <line x1="4.2" y1="19.8" x2="6.3" y2="17.7" stroke="currentColor" stroke-width="2"/>
+          <line x1="17.7" y1="6.3" x2="19.8" y2="4.2" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <svg class="icon moon" xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24">
+          <defs>
+            <mask id="moon-mask">
+              <rect width="24" height="24" fill="white"/>
+              <circle cx="17" cy="10" r="8" fill="black"/>
+            </mask>
+          </defs>
+          <circle cx="12" cy="12" r="10" fill="currentColor" mask="url(#moon-mask)"/>
+        </svg>
+      </label>
+    </div>
+
+
     <h2>Скачать книгу</h2>
 
     <div class="page-range-container">
       <div class="page-range">
-        <label for="start-page">C</label>
+        <label>Со страницы</label>
         <input type="number" id="start-page" min="1" value="1">
-        <span>страницы</span>
       </div>
       <div class="page-range">
-        <label for="end-page">По</label>
+        <label>По страницу</label>
         <input type="number" id="end-page" min="1" value="1">
-        <span>страницу</span>
       </div>
     </div>
 
     <div id="format-selector-container">
       <span id="higher">Формат:</span>
-      <div class="radio-option">
-        <input type="radio" id="pdf" name="format-selector" value="svg" checked>
-        <label for="pdf">PDF</label>
-      </div>
-      <div class="radio-option">
-        <input type="radio" id="epub" name="format-selector" value="text">
-        <label for="epub">ePub (текст)</label>
+      <div class="format-buttons">
+        <div class="radio-option">
+          <input type="radio" id="pdf" name="format-selector" value="pdf" checked>
+          <label for="pdf">PDF</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="epub" name="format-selector" value="epub">
+          <label for="epub">ePub</label>
+        </div>
       </div>
     </div>
-
 
     <button id="start-download">Начать загрузку</button>
 
     <div id="progress-container">
       <div class="progress-circle">
-        <svg id="progress-ring">
-          <circle cx="75" cy="75" r="65" stroke-width="8" fill="transparent" stroke="#ccc"></circle>
-          <circle id="progress-ring-circle" cx="75" cy="75" r="65" stroke-width="8" fill="transparent" stroke="#4caf50" stroke-dasharray="408" stroke-dashoffset="408"></circle>
+        <svg id="progress-ring" width="150" height="150">
+          <circle class="progress-bg" cx="75" cy="75" r="65"></circle>
+          <circle id="progress-ring-circle" cx="75" cy="75" r="65"></circle>
         </svg>
         <span class="progress-text" id="progress-text">0%</span>
       </div>
     </div>
   </div>
+
 
   <script src="popup.js"></script>
 </body>

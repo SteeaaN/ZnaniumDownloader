@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Znanium Downloader",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "permissions": [
     "storage",
     "webRequest",
@@ -15,7 +15,7 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "Znanium Downloader",
-    "default_popup_width": 260
+    "default_popup_width": 328
   },
   "description": "Загрузка книг Znanium в PDF и ePub",
   "content_security_policy": {

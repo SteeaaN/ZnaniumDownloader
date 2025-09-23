@@ -71,8 +71,8 @@ window.onload = function () {
                 func: checkEpubAvailability,
             }, (results) => {
                 const epubAvailable = results[0].result;
-                const epubOption = document.querySelector(`input[name="format-selector"][value="text"]`);
-                const pdfOption = document.querySelector(`input[name="format-selector"][value="svg"]`);
+                const epubOption = document.querySelector(`input[name="format-selector"][value="epub"]`);
+                const pdfOption = document.querySelector(`input[name="format-selector"][value="pdf"]`);
                 
                 if (!epubAvailable) {
                     epubOption.disabled = true;
@@ -141,6 +141,29 @@ document.querySelectorAll('input[name="format-selector"]').forEach((radio) => {
             chrome.storage.local.set({ format: this.value });
         }
     });
+});
+
+const container = document.querySelector('.container');
+const themeSwitch = document.getElementById('theme-switch');
+
+chrome.storage.local.get(['theme'], (data) => {
+  if (data.theme === 'dark') {
+    container.classList.add('dark-theme');
+    document.body.classList.add('dark');
+    themeSwitch.checked = true;
+  }
+});
+
+themeSwitch.addEventListener('change', () => {
+  if (themeSwitch.checked) {
+    container.classList.add('dark-theme');
+    document.body.classList.add('dark');
+    chrome.storage.local.set({ theme: 'dark' });
+  } else {
+    container.classList.remove('dark-theme');
+    document.body.classList.remove('dark');
+    chrome.storage.local.set({ theme: 'light' });
+  }
 });
 
 let isDataLoaded = false;
