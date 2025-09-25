@@ -1,16 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Znanium Downloader",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "permissions": [
     "storage",
-    "webRequest",
     "activeTab",
     "scripting",
     "power"
   ],
   "host_permissions": [
-    "https://znanium.com/*"
+    "https://znanium.ru/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -38,7 +37,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["libs/inject.js"],
+      "resources": ["inject.js", "worker.js","libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js", "decryptSVG.wasm", "libs/jszip.min.js"],
       "matches": ["*://znanium.ru/*"]
     }
   ]

@@ -7,4 +7,4 @@ function injectScript(filePath) {
     };
 }
 
-injectScript('libs/inject.js');
+injectScript('inject.js');

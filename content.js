@@ -1,4 +1,21 @@
-﻿function getDecryptionKey() {
+﻿async function createWorker() {
+    const workerUrl = chrome.runtime.getURL("worker.js");
+    const response = await fetch(workerUrl);
+    let code = await response.text();
+
+    const libs = [
+        "libs/pdfkit.standalone.js",
+        "libs/blob-stream.min.js",
+        "libs/SVG-to-PDFKit.js",
+        "libs/jszip.min.js"
+    ].map(l => chrome.runtime.getURL(l));
+
+    const header = `importScripts(${libs.map(u => `"${u}"`).join(", ")});\n`;
+    const blob = new Blob([header + code], { type: "application/javascript" });
+    return new Worker(URL.createObjectURL(blob));
+}
+
+function getDecryptionKey() {
     const renderVerInput = document.querySelector('#render-ver');
     return renderVerInput.value.split(':')[0];
 }
@@ -69,31 +86,12 @@ async function requestPage(pageNumber, bookId, format) {
         }
         window.addEventListener("message", messageHandler);
         window.postMessage({
-    	    action: "getPage",
+            action: "getPage",
             pageNumber: pageNumber,
-    	    bookId: bookId,
+            bookId: bookId,
             format: format
         }, "*");
     });
-}
-
-function decryptSVG(encryptedSVG, crkey) {
-    let digitOrd = { 0: 48, 1: 49, 2: 50, 3: 51, 4: 52, 5: 53, 6: 54, 7: 55, 8: 56, 9: 57 };
-    let digitChr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-    let key = Array.from(crkey).map(c => c.charCodeAt(0)).join("");
-    let e = key.length, h = 0, decrypted = "", startDecrypt = false;
-    for (const char of encryptedSVG) {
-        if (char in digitOrd && startDecrypt) {
-            let r = parseInt(char, 10) - parseInt(key[h], 10);
-            if (r < 0) r += 10;
-            decrypted += digitChr[r];
-            h = (h + 1) % e;
-        } else {
-            decrypted += char;
-            if (char === ">") startDecrypt = true;
-        }
-    }
-    return decrypted;
 }
 
 async function fetchPage(bookId, pageNumber, format) {
@@ -109,8 +107,7 @@ async function fetchPage(bookId, pageNumber, format) {
                 if (!pageTextElement?.textContent?.trim()) {
                     throw new Error("Текст страницы не найден");
                 }
-                let rawText = pageTextElement.textContent.trim();
-                return rawText.replace(/<\/?pre[^>]*>/g, "").trim();
+                return pageTextElement.textContent.trim();
             } else {
                 let bookpageElement = xmlDoc.querySelector("bookpage");
                 if (!bookpageElement?.textContent?.trim()) {
@@ -131,98 +128,95 @@ async function fetchPage(bookId, pageNumber, format) {
     }
 }
 
-function escapeXML(str) {
-    return str.replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&apos;");
-}
+async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, worker, processedPages) {
+    const { author, toc } = await getBookMetadata(bookId);
 
-function generateTOCNav(toc) {
-    function buildTOC(items) {
-        return `<ol>` + items.map(item => {
-            let cleanTitle = escapeXML(item.title);
-            let pageFilename = `page${item.page - 1}.xhtml`;
-
-            return `
-            <li><a href="${pageFilename}">${cleanTitle}</a>
-                ${item.subitems.length ? buildTOC(item.subitems) : ""}
-            </li>`;
-        }).join("") + `</ol>`;
-    }
-    return `<?xml version="1.0" encoding="UTF-8"?>
-    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-    <head>
-        <title>Оглавление</title>
-    </head>
-    <body>
-        <nav epub:type="toc" id="toc">
-            <h2>Оглавление</h2>
-            ${buildTOC(toc)}
-        </nav>
-    </body>
-    </html>`;
-}
-
-async function generateEPUB(bookTitle, author, pages, bookId, totalPages, toc) {
-    const zip = new JSZip();
-    const epub = zip.folder("EPUB");
-    let tocNav = toc ? generateTOCNav(toc) : "";
-    const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
-    <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="3.0">
-        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-            <dc:title>${bookTitle}</dc:title>
-            <dc:creator>${author}</dc:creator>
-            <dc:identifier id="bookid">${bookId}</dc:identifier>
-        </metadata>
-	<manifest>
-    	    ${toc ? '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>' : ""}
-    	    ${pages.map((_, i) => `<item id="page${i}" href="page${i}.xhtml" media-type="application/xhtml+xml"/>`).join("\n")}
-	</manifest>
-	<spine>
-    	    ${pages.map((_, i) => `<itemref idref="page${i}"/>`).join("\n")}
-	</spine>
-    </package>`;
-    epub.file("content.opf", contentOpf);
-    if (toc) {
-        epub.file("nav.xhtml", tocNav);
-    }
-    pages.forEach((text, i) => {
-        const pageXHTML = `<?xml version="1.0" encoding="UTF-8"?>
-        <html xmlns="http://www.w3.org/1999/xhtml">
-            <head>
-                <title>Page ${i + 1}</title>
-                <style>
-                    body { font-family: serif; line-height: 1.2; margin: 1em; text-align: justify; }
-                    p { margin: 0 0 0em 0; }
-                </style>
-            </head>
-            <body>
-                ${escapeXML(text)
-                    .split(/\n+/g)
-                    .map(line => `<p>${line.trim()}</p>`)
-                    .join("\n")}
-            </body>
-        </html>`;
-        epub.file(`page${i}.xhtml`, pageXHTML);
-        let progress = Math.round(((i + 1) / totalPages) * 100);
-        if (progress === 100 && (i + 1) < totalPages) {
-            progress = 99;
-        }
-        updateProgress(progress, 2);
+    worker.postMessage({
+        action: "initEPUB",
+        bookTitle,
+        bookId,
+        author,
+        toc
     });
-    zip.folder("META-INF").file("container.xml", `<?xml version="1.0"?>
-    <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-        <rootfiles>
-            <rootfile full-path="EPUB/content.opf" media-type="application/oebps-package+xml"/>
-        </rootfiles>
-    </container>`);
-    const blob = await zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${bookTitle}.epub`;
-    link.click();
+
+    let downloadStopped = false;
+
+    worker.onmessage = (e) => {
+        if (e.data.action === "pageAdded") {
+            processedPages++;
+            updateProgress(Math.round((processedPages / totalPages) * 100));
+        } else if (e.data.action === "done") {
+            const blob = e.data.blob;
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${bookTitle}.epub`;
+            link.click();
+            chrome.runtime.sendMessage({ action: "stopDownload" });
+        } else if (e.data.action === "error") {
+            setError(`Ошибка в воркере EPUB`);
+            chrome.runtime.sendMessage({ action: "stopDownload" });
+            downloadStopped = true;
+        }
+    };
+
+    for (let page = startPage; page <= endPage; page++) {
+        if (downloadStopped) break;
+        let pageContent = await fetchPage(bookId, page, "epub");
+        if (pageContent === undefined) {
+            setError(`Ошибка при скачивании странцы`);
+            chrome.runtime.sendMessage({action: "stopDownload" })
+            return;
+        } 
+        worker.postMessage({ action: "addPageEPUB", text: pageContent });
+    }
+
+    if (!downloadStopped) {
+        worker.postMessage({ action: "finalizeEPUB" });
+    }
+}
+
+async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, worker, processedPages) {
+    const decryptionKey = getDecryptionKey();
+    worker.postMessage({ action: "initPDF", bookTitle, wasmUrl: chrome.runtime.getURL("decryptSVG.wasm") });
+
+    let downloadStopped = false;
+    
+    worker.onmessage = (e) => {
+        if (e.data.action === "pageAdded") {
+            processedPages++;
+            updateProgress(Math.round((processedPages / totalPages) * 100));
+        } else if (e.data.action === "done") {
+            const blob = new Blob([e.data.buffer], { type: 'application/pdf' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${bookTitle}.pdf`;
+            link.click();
+            chrome.runtime.sendMessage({ action: "stopDownload" });
+        } else if (e.data.action === "error") {
+            setError(`Ошибка при скачивании странцы`);
+            chrome.runtime.sendMessage({ action: "stopDownload" });
+            downloadStopped = true;
+        }
+    };
+
+    for (let page = startPage; page <= endPage; page++) {
+        if (downloadStopped) break;
+        let pageContent = await fetchPage(bookId, page, "pdf");
+        if (pageContent === undefined) {
+            setError(`Ошибка в воркере PDF`);
+            chrome.runtime.sendMessage({action: "stopDownload" })
+            return;
+        } 
+        worker.postMessage({
+            action: "addPagePDF",
+            svgData: pageContent,
+            key: decryptionKey,
+            pageNumber: page
+        });
+    }
+    if (!downloadStopped) {
+        worker.postMessage({ action: "finalizePDF" });
+    }
 }
 
 async function startDownload(startPage, endPage, format) {
@@ -233,98 +227,22 @@ async function startDownload(startPage, endPage, format) {
         setError('Номер книги не найден в ссылке.');
         return;
     }
-    const decryptionKey = getDecryptionKey();
-    let pagesData = [];
-    let totalPages = endPage - startPage + 1;
-    let processedPages = 0;
-    for (let page = startPage; page <= endPage; page++) {
-        try {
-            let pageContent = await fetchPage(bookId, page, format);
-            if (pageContent === undefined) {
-                return;
-            }
-            if (format === "epub") {
-                pagesData.push(pageContent);
-            } else {
-                pagesData.push({
-                    svgData: pageContent,
-                    key: decryptionKey
-                });
-            }
-            processedPages++;
-            let progress = Math.round((processedPages / totalPages) * 100);
-            if (progress === 100 && processedPages < totalPages) {
-                progress = 99;
-            }
-            updateProgress(progress, 1);
-        } catch (err) {
-            console.error(err);
-            alert('Ошибка при скачивании');
-            setError('Ошибка при скачивании');
+    const totalPages = endPage - startPage + 1;
+    const worker = await createWorker();
+    if (format === "epub") {
+        await downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, worker, 0);
+    } else {
+        if (!document.querySelector('#render-ver')) {
+            alert('Не найден ключ расшифровки.');
+            setError('Не найден ключ расшифровки.');
             return;
         }
+        await downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, worker, 0);
     }
-    if (format === "epub") {
-        const { author, toc } = await getBookMetadata(bookId);
-        generateEPUB(bookTitle, author, pagesData, bookId, totalPages, toc);
-    } else {
-        processPages(bookTitle, pagesData);
-    }
-    chrome.runtime.sendMessage({ action: "stopDownload" });
 }
 
-async function processPages(bookTitle, pagesData) {
-    const doc = new PDFDocument({ autoFirstPage: false });
-    const stream = doc.pipe(blobStream());
-    let totalPages = pagesData.length;
-    let processedPages = 0;
-    try {
-        for (const { svgData, key } of pagesData) {
-            let decryptedSVG = decryptSVG(svgData, key);
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = decryptedSVG.trim();
-            let svgElement = tempDiv.querySelector("svg");
-            let viewBox = svgElement.getAttribute("viewBox");
-            let width, height;
-            if (viewBox) {
-                let parts = viewBox.split(" ").map(parseFloat);
-                width = parts[2];
-                height = parts[3];
-            } else {
-                width = parseFloat(svgElement.getAttribute("width"));
-                height = parseFloat(svgElement.getAttribute("height"));
-            }
-            doc.addPage({ size: [width, height] });
-            svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
-            svgElement.setAttribute("width", width);
-            svgElement.setAttribute("height", height);
-            SVGtoPDF(doc, decryptedSVG, 0, 0, { preserveAspectRatio: 'none' });
-            processedPages++;
-            let progress = Math.round((processedPages / totalPages) * 100);
-            if (progress === 100 && processedPages < totalPages) {
-                progress = 99;
-            }
-            updateProgress(progress, 2);
-        }
-    } catch (error) {
-        alert('Ошибка при сохранении PDF.');
-        setError('Ошибка при сохранении PDF.');
-        console.error(error);
-        return;
-    }
-
-    doc.end();
-    stream.on('finish', function() {
-        const blob = stream.toBlob('application/pdf');
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${bookTitle}.pdf`;
-        link.click();
-    });
-}
-
-function updateProgress(percentage, stage) {
-    chrome.runtime.sendMessage({ action: 'updateProgress', percentage, stage });
+function updateProgress(percentage) {
+    chrome.runtime.sendMessage({ action: 'updateProgress', percentage });
 }
 
 function getBookIdFromURL() {

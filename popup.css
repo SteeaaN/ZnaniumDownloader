@@ -1,4 +1,4 @@
-input, textarea {
+input, textarea, #progress-text {
   user-select: text;
 }
 
@@ -27,7 +27,6 @@ input, textarea {
   --button-disabled-text: #bbb;
   --progress-color: #006AF2;
 }
-
 
 .page-range input, 
 #start-download {

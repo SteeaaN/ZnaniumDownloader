@@ -33,9 +33,8 @@ function startDownloadFromContent(startPage, endPage, format) {
 chrome.runtime.onMessage.addListener(function(request) {
     if (request.action === 'updateProgress') {
         const progress = request.percentage;
-        const stage = request.stage;
-        setProgress(progress, stage);
-        if (progress >= 100 && stage === 2) {
+        setProgress(progress);
+        if (progress >= 100) {
             document.getElementById('progress-text').textContent = 'Загрузка завершена';
             document.getElementById('start-download').disabled = false;
             document.getElementById('start-page').disabled = false;
@@ -103,12 +102,12 @@ function resetProgress() {
     progressCircle.style.strokeDashoffset = 408;
 }
 
-function setProgress(percentage, stage) {
+function setProgress(percentage) {
     const progressCircle = document.getElementById('progress-ring-circle');
     const radius = progressCircle.r.baseVal.value;
     const circumference = 2 * Math.PI * radius;
     progressCircle.style.strokeDashoffset = circumference - (percentage / 100) * circumference;
-    document.getElementById('progress-text').innerHTML = `${percentage}%<br>${stage}/2`;
+    document.getElementById('progress-text').innerHTML = `${percentage}%`;
 }
 
 function validatePageRange() {
