@@ -5,7 +5,7 @@
         try {
             let jwt = window.readercontrols.reader.reader.makeAuthorizationKey(event.data.pageNumber, true);
             let url;
-            if (event.data.format === "text") {
+            if (event.data.format === "epub") {
                 url = `https://znanium.ru/read/page?doc=${event.data.bookId}&page=${event.data.pageNumber}&current=1&text=1&q=`;
             } else {
                 url = `https://znanium.ru/read/page?doc=${event.data.bookId}&page=${event.data.pageNumber}&current=1&d=&t=svg`;
