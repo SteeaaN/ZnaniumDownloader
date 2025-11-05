@@ -163,7 +163,7 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
         if (downloadStopped) break;
         let pageContent = await fetchPage(bookId, page, "epub");
         if (pageContent === undefined) {
-            setError(`Ошибка при скачивании странцы`);
+            setError(`Ошибка при скачивании страницы`);
             chrome.runtime.sendMessage({action: "stopDownload" })
             return;
         } 
@@ -193,7 +193,7 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
             link.click();
             chrome.runtime.sendMessage({ action: "stopDownload" });
         } else if (e.data.action === "error") {
-            setError(`Ошибка при скачивании странцы`);
+            setError(`Ошибка при скачивании страницы`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
         }

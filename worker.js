@@ -37,6 +37,82 @@ function generateTOCNav(toc) {
     </html>`;
 }
 
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function blobToDataURL(blob) {
+  try {
+    const fr = new FileReader();
+    const p = new Promise((res, rej) => {
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+    });
+    fr.readAsDataURL(blob);
+    return await p;
+  } catch {
+    const buf = await blob.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return "data:image/png;base64," + btoa(binary);
+  }
+}
+
+async function webpDataURLtoPngDataURL(dataURL) {
+  const b64 = dataURL.split(",")[1];
+  const bytes = base64ToBytes(b64);
+  const bmp = await createImageBitmap(new Blob([bytes], { type: "image/webp" }));
+  const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bmp, 0, 0);
+  const pngBlob = await canvas.convertToBlob({ type: "image/png" });
+  return await blobToDataURL(pngBlob);
+}
+
+async function convertWebPImagesInSVG(svgText) {
+  const dataUrlRegex = /(<image[^>]+(?:href|xlink:href)\s*=\s*")[^"]+(")/gi;
+  const hrefs = [];
+  let match;
+  while ((match = dataUrlRegex.exec(svgText))) {
+    hrefs.push({ start: match.index + match[1].length, end: dataUrlRegex.lastIndex - match[2].length });
+  }
+
+  const slices = hrefs.map(({ start, end }) => svgText.slice(start, end));
+  const unique = [...new Set(slices)];
+
+  const replacements = new Map();
+  for (const url of unique) {
+    try {
+      if (url.startsWith("data:image/webp")) {
+        const pngUrl = await webpDataURLtoPngDataURL(url);
+        replacements.set(url, pngUrl);
+      } else if (/\.webp(\?|#|$)/i.test(url)) {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const bmp = await createImageBitmap(blob);
+        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bmp, 0, 0);
+        const pngBlob = await canvas.convertToBlob({ type: "image/png" });
+        const pngDataURL = await blobToDataURL(pngBlob);
+        replacements.set(url, pngDataURL);
+      }
+    } catch (e) {}
+  }
+
+  if (replacements.size === 0) return svgText;
+
+  let out = svgText;
+  for (const [from, to] of replacements.entries()) {
+    out = out.split(from).join(to);
+  }
+  return out;
+}
+
 let epubZip, epubFolder, epubPages = [], epubBookId, epubTitle, epubAuthor, epubTOC;
 
 async function finalizeEPUB() {
@@ -205,6 +281,8 @@ self.onmessage = async (e) => {
                 wasm.free(ptrSvg);
                 wasm.free(ptrKey);
                 wasm.free(resultPtr);
+
+                decryptedSVG = await convertWebPImagesInSVG(decryptedSVG);
 
                 const { width, height } = parseSVGDimensions(decryptedSVG);
                 doc.addPage({ size: [width, height] });
