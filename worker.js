@@ -240,7 +240,7 @@ function parseSVGDimensions(svgText) {
     return { width: 595, height: 842 };
 }
 
-self.onmessage = async (e) => {
+async function handleMessage(e) {
     const { action } = e.data;
 
     try {
@@ -252,68 +252,79 @@ self.onmessage = async (e) => {
             epubAuthor = e.data.author;
             epubTOC = e.data.toc;
             epubPages = [];
+            return;
         }
 
         if (action === "addPageEPUB") {
             epubPages.push(e.data.text);
             self.postMessage({ action: "pageAdded" });
+            return;
         }
 
         if (action === "finalizeEPUB") {
             await finalizeEPUB();
+            return;
         }
 
         if (action === "initPDF") {
             doc = new PDFDocument({ autoFirstPage: false });
             stream = doc.pipe(blobStream());
             wasmUrl = e.data.wasmUrl;
+            return;
         }
 
         if (action === "addPagePDF") {
-            try {
-                const { svgData, key, pageNumber, totalPages } = e.data;
-                const wasm = await loadDecryptWASM();
+            if (!doc) throw new Error("PDF документ не инициализирован");
+            const { svgData, key } = e.data;
+            const wasm = await loadDecryptWASM();
 
-                let ptrSvg = stringToWasm(svgData);
-                let ptrKey = stringToWasm(key);
-                let resultPtr = wasm.decryptSVG(ptrSvg, ptrKey);
-                let decryptedSVG = wasmStringToJS(resultPtr);
-                wasm.free(ptrSvg);
-                wasm.free(ptrKey);
-                wasm.free(resultPtr);
+            const ptrSvg = stringToWasm(svgData);
+            const ptrKey = stringToWasm(key);
+            const resultPtr = wasm.decryptSVG(ptrSvg, ptrKey);
+            let decryptedSVG = wasmStringToJS(resultPtr);
+            wasm.free(ptrSvg);
+            wasm.free(ptrKey);
+            wasm.free(resultPtr);
 
-                decryptedSVG = await convertWebPImagesInSVG(decryptedSVG);
+            decryptedSVG = await convertWebPImagesInSVG(decryptedSVG);
 
-                const { width, height } = parseSVGDimensions(decryptedSVG);
-                doc.addPage({ size: [width, height] });
-                SVGtoPDF(doc, decryptedSVG, 0, 0, { preserveAspectRatio: "none" });
+            const { width, height } = parseSVGDimensions(decryptedSVG);
+            doc.addPage({ size: [width, height] });
+            SVGtoPDF(doc, decryptedSVG, 0, 0, { preserveAspectRatio: "none" });
 
-                self.postMessage({ action: "pageAdded" });
-            } catch (err) {
-                console.error(err);
-                self.postMessage({ action: "error", error: err.message || String(err) });
-            }
+            self.postMessage({ action: "pageAdded" });
+            return;
         }
 
         if (action === "finalizePDF") {
-            try {
-                doc.end();
-                stream.on("finish", async () => {
-                    const blob = stream.toBlob("application/pdf");
-                    try {
-                        const arrayBuffer = await blob.arrayBuffer();
-                        self.postMessage({ action: "done", buffer: arrayBuffer }, [arrayBuffer]);
-                    } catch {
-                        self.postMessage({ action: "done", blob });
-                    }
-                });
-            } catch (err) {
-                console.error(err);
-                self.postMessage({ action: "error", error: "Ошибка финализации PDF: " + (err.message || String(err)) });
+            if (!doc || !stream) {
+                throw new Error("PDF документ не инициализирован");
             }
+            stream.once("finish", async () => {
+                const blob = stream.toBlob("application/pdf");
+                try {
+                    const arrayBuffer = await blob.arrayBuffer();
+                    self.postMessage({ action: "done", buffer: arrayBuffer }, [arrayBuffer]);
+                } catch {
+                    self.postMessage({ action: "done", blob });
+                }
+            });
+            doc.end();
+            return;
         }
     } catch (err) {
         console.error(err);
         self.postMessage({ action: "error", error: err.message || String(err) });
     }
+}
+
+let messageQueue = Promise.resolve();
+
+self.onmessage = (e) => {
+    messageQueue = messageQueue
+        .then(() => handleMessage(e))
+        .catch(err => {
+            console.error(err);
+            self.postMessage({ action: "error", error: err.message || String(err) });
+        });
 };

@@ -140,11 +140,21 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
     });
 
     let downloadStopped = false;
+    let allPagesQueued = false;
+    let finalizeRequested = false;
+
+    const tryFinalizeEPUB = () => {
+        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === totalPages) {
+            finalizeRequested = true;
+            worker.postMessage({ action: "finalizeEPUB" });
+        }
+    };
 
     worker.onmessage = (e) => {
         if (e.data.action === "pageAdded") {
             processedPages++;
             updateProgress(Math.round((processedPages / totalPages) * 100));
+            tryFinalizeEPUB();
         } else if (e.data.action === "done") {
             const blob = e.data.blob;
             const link = document.createElement("a");
@@ -152,10 +162,12 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
             link.download = `${bookTitle}.epub`;
             link.click();
             chrome.runtime.sendMessage({ action: "stopDownload" });
+            finalizeRequested = true;
         } else if (e.data.action === "error") {
             setError(`Ошибка в воркере EPUB`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
+            finalizeRequested = true;
         }
     };
 
@@ -170,9 +182,8 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
         worker.postMessage({ action: "addPageEPUB", text: pageContent });
     }
 
-    if (!downloadStopped) {
-        worker.postMessage({ action: "finalizeEPUB" });
-    }
+    allPagesQueued = true;
+    tryFinalizeEPUB();
 }
 
 async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, worker, processedPages) {
@@ -180,13 +191,25 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
     worker.postMessage({ action: "initPDF", bookTitle, wasmUrl: chrome.runtime.getURL("decryptSVG.wasm") });
 
     let downloadStopped = false;
+    let allPagesQueued = false;
+    let finalizeRequested = false;
+
+    const tryFinalizePDF = () => {
+        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === totalPages) {
+            finalizeRequested = true;
+            worker.postMessage({ action: "finalizePDF" });
+        }
+    };
     
     worker.onmessage = (e) => {
         if (e.data.action === "pageAdded") {
             processedPages++;
             updateProgress(Math.round((processedPages / totalPages) * 100));
+            tryFinalizePDF();
         } else if (e.data.action === "done") {
-            const blob = new Blob([e.data.buffer], { type: 'application/pdf' });
+            finalizeRequested = true;
+            const dataBuffer = e.data.buffer;
+            const blob = dataBuffer ? new Blob([dataBuffer], { type: 'application/pdf' }) : e.data.blob;
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = `${bookTitle}.pdf`;
@@ -196,6 +219,7 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
             setError(`Ошибка при скачивании страницы`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
+            finalizeRequested = true;
         }
     };
 
@@ -214,9 +238,8 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
             pageNumber: page
         });
     }
-    if (!downloadStopped) {
-        worker.postMessage({ action: "finalizePDF" });
-    }
+    allPagesQueued = true;
+    tryFinalizePDF();
 }
 
 async function startDownload(startPage, endPage, format) {
