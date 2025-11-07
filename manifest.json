@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Znanium Downloader",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "permissions": [
     "storage",
     "activeTab",
@@ -9,12 +9,12 @@
     "power"
   ],
   "host_permissions": [
-    "https://znanium.ru/*"
+    "https://znanium.ru/*",
+    "https://api.github.com/"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Znanium Downloader",
-    "default_popup_width": 328
+    "default_title": "Znanium Downloader"
   },
   "description": "Загрузка книг Znanium в PDF и ePub",
   "content_security_policy": {

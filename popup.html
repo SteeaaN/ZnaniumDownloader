@@ -9,8 +9,30 @@
 </head>
 <body>
   <div class="container">
+    <div class="update-indicator-wrapper">
+      <div id="update-indicator" class="update-indicator hidden" title="Доступна новая версия, нажмите чтобы перейти">
+        <svg class="update-icon" viewBox="0 0 24 30" aria-hidden="true">
+          <path d="M9 4 L15 4 L14 17 L10 17 Z"></path>
+          <circle cx="12" cy="22.5" r="3"></circle>
+        </svg>
+
+        <svg class="update-text-svg"
+            viewBox="0 0 196 20"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true">
+          <text x="0"
+                y="16"
+                font-size="17"
+                font-weight="600"
+                font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                fill="#111">
+            Доступна новая версия
+          </text>
+        </svg>
+      </div>
+    </div>
     <div class="theme-toggle">
-      <input type="checkbox" id="theme-switch">
+      <input type="checkbox" id="theme-switch" aria-label="Переключить тему">
       <label for="theme-switch">
         <svg class="icon sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="5" fill="currentColor"/>
@@ -36,16 +58,15 @@
       </label>
     </div>
 
-
     <h2>Скачать книгу</h2>
 
     <div class="page-range-container">
       <div class="page-range">
-        <label>Со страницы</label>
+        <label for="start-page">Со страницы</label>
         <input type="number" id="start-page" min="1" value="1">
       </div>
       <div class="page-range">
-        <label>По страницу</label>
+        <label for="end-page">По страницу</label>
         <input type="number" id="end-page" min="1" value="1">
       </div>
     </div>
@@ -76,7 +97,6 @@
       </div>
     </div>
   </div>
-
 
   <script src="popup.js"></script>
 </body>

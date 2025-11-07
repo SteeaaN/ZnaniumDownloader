@@ -1,4 +1,5 @@
 input, textarea, #progress-text {
+  -webkit-user-select: text;
   user-select: text;
 }
 
@@ -35,6 +36,7 @@ input, textarea, #progress-text {
 
 body {
   max-width: 288px;
+  -webkit-user-select: none;
   user-select: none;
   font-family: "Inter", "Segoe UI", sans-serif;
   margin: 0;
@@ -117,6 +119,15 @@ h2 {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+}
+
+#format-selector-container.format-locked .format-buttons {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+#format-selector-container.format-locked .radio-option label {
+  cursor: not-allowed;
 }
 
 #higher {
@@ -298,4 +309,48 @@ h2 {
 
 .theme-toggle input:checked + label::after {
   transform: translateX(20px);
+}
+
+.update-indicator-wrapper {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%) scale(1.2);
+  transform-origin: center;
+  display: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.update-indicator-wrapper.visible {
+  display: block;
+}
+
+.update-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  height: 20px;
+  padding: 0 6px;
+  background: #ffc107;
+  border-radius: 20px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 3;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.update-indicator:hover {
+  background: #ffcf33;
+  transform: translateY(-1px); /* только лёгкое движение */
+}
+
+.update-icon {
+  width: 12px;
+  height: 12px;
+  fill: #111;
+}
+
+.update-text-svg {
+  height: 12px;
+  display: block;
 }
