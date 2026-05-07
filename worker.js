@@ -180,9 +180,12 @@ async function finalizeEPUB() {
 }
 
 let wasm;
-let memory;
 let doc, stream;
 let wasmUrl = null;
+
+function getMemory() {
+    return new Uint8Array(wasm.memory.buffer);
+}
 
 async function loadDecryptWASM() {
     if (wasm) return wasm;
@@ -192,9 +195,7 @@ async function loadDecryptWASM() {
         env: { emscripten_notify_memory_growth: () => {} }
     });
     wasm = instance.exports;
-    if (wasm.memory) {
-        memory = new Uint8Array(wasm.memory.buffer);
-    } else {
+    if (!wasm.memory) {
         console.error("WASM-модуль не экспортирует память");
     }
     return wasm;
@@ -202,8 +203,9 @@ async function loadDecryptWASM() {
 
 function wasmStringToJS(ptr) {
     let str = "";
-    while (memory[ptr] !== 0) {
-        str += String.fromCharCode(memory[ptr++]);
+    const mem = getMemory();
+    while (mem[ptr] !== 0) {
+        str += String.fromCharCode(mem[ptr++]);
     }
     return str;
 }
@@ -212,7 +214,8 @@ function stringToWasm(str) {
     const encoder = new TextEncoder();
     const encoded = encoder.encode(str + "\0");
     const ptr = wasm.malloc(encoded.length);
-    memory.set(encoded, ptr);
+    const mem = getMemory();
+    mem.set(encoded, ptr);
     return ptr;
 }
 
@@ -278,13 +281,20 @@ async function handleMessage(e) {
             const { svgData, key } = e.data;
             const wasm = await loadDecryptWASM();
 
-            const ptrSvg = stringToWasm(svgData);
-            const ptrKey = stringToWasm(key);
-            const resultPtr = wasm.decryptSVG(ptrSvg, ptrKey);
-            let decryptedSVG = wasmStringToJS(resultPtr);
-            wasm.free(ptrSvg);
-            wasm.free(ptrKey);
-            wasm.free(resultPtr);
+            let ptrSvg = 0;
+            let ptrKey = 0;
+            let resultPtr = 0;
+            let decryptedSVG;
+            try {
+                ptrSvg = stringToWasm(svgData);
+                ptrKey = stringToWasm(key);
+                resultPtr = wasm.decryptSVG(ptrSvg, ptrKey);
+                decryptedSVG = wasmStringToJS(resultPtr);
+            } finally {
+                if (ptrSvg) wasm.free(ptrSvg);
+                if (ptrKey) wasm.free(ptrKey);
+                if (resultPtr) wasm.free(resultPtr);
+            }
 
             decryptedSVG = await convertWebPImagesInSVG(decryptedSVG);
 

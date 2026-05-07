@@ -38,6 +38,18 @@
 Текстовое скачивание в формате ePub доступно только в тех книгах, где есть кнопка "txt" возле обозначения страниц. Если на главной странице книги есть оглавление, то оно добавится при скачивании. Иногда Знаниум добавляет текст только на часть страниц.
 
 <p align="center">
-  <img width="328" height="467" alt="white" src="https://github.com/user-attachments/assets/ad090783-ceb1-4e66-98eb-004ac4de532c" />
-  <img width="328" height="467" alt="black" src="https://github.com/user-attachments/assets/2fa62359-c0bd-47f6-ba5a-7f9b580d9a19" />
+  <img width="328" alt="white" src="https://github.com/user-attachments/assets/54e9778b-9031-4657-aac3-d57686ccf7b8" />
+  <img width="328" alt="black" src="https://github.com/user-attachments/assets/ee4b2797-d598-4bc5-87d8-371aec407183" />
 </p>
+
+
+<details>
+<summary>🛠 <b>Для разработчиков (сборка WASM)</b></summary>
+
+Расшифровка SVG написана на C для повышения производительности. Исходный код находится в `/wasm_src`.
+
+**Требования:** [Emscripten SDK](https://emscripten.org/)
+
+**Команда сборки:**
+```bash
+emcc DecryptSVG.c -o ../decryptSVG.wasm -O3 --no-entry -s EXPORTED_FUNCTIONS="['_decryptSVG', '_freeMemory', '_malloc', '_free']"

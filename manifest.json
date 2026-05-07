@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Znanium Downloader",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "permissions": [
     "storage",
     "activeTab",
@@ -30,15 +30,34 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://znanium.ru/read?id=*"],
-      "js": ["preload.js", "content.js", "libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js", "libs/jszip.min.js"],
+      "matches": [
+        "*://znanium.ru/read?id=*"
+      ],
+      "js": [
+        "preload.js",
+        "content.js",
+        "libs/pdfkit.standalone.js",
+        "libs/blob-stream.min.js",
+        "libs/SVG-to-PDFKit.js",
+        "libs/jszip.min.js"
+      ],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js", "worker.js","libs/pdfkit.standalone.js", "libs/blob-stream.min.js", "libs/SVG-to-PDFKit.js", "decryptSVG.wasm", "libs/jszip.min.js"],
-      "matches": ["*://znanium.ru/*"]
+      "resources": [
+        "inject.js",
+        "worker.js",
+        "libs/pdfkit.standalone.js",
+        "libs/blob-stream.min.js",
+        "libs/SVG-to-PDFKit.js",
+        "decryptSVG.wasm",
+        "libs/jszip.min.js"
+      ],
+      "matches": [
+        "*://znanium.ru/*"
+      ]
     }
   ]
 }

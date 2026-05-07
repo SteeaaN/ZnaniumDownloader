@@ -1,4 +1,4 @@
-﻿async function createWorker() {
+async function createWorker() {
     const workerUrl = chrome.runtime.getURL("worker.js");
     const response = await fetch(workerUrl);
     let code = await response.text();
@@ -142,9 +142,15 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
     let downloadStopped = false;
     let allPagesQueued = false;
     let finalizeRequested = false;
+    let pagesQueuedCount = 0;
 
     const tryFinalizeEPUB = () => {
-        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === totalPages) {
+        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === pagesQueuedCount) {
+            if (pagesQueuedCount === 0) {
+                chrome.runtime.sendMessage({ action: "stopDownload" });
+                worker.terminate();
+                return;
+            }
             finalizeRequested = true;
             worker.postMessage({ action: "finalizeEPUB" });
         }
@@ -163,11 +169,13 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
             link.click();
             chrome.runtime.sendMessage({ action: "stopDownload" });
             finalizeRequested = true;
+            worker.terminate();
         } else if (e.data.action === "error") {
             setError(`Ошибка в воркере EPUB`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
             finalizeRequested = true;
+            worker.terminate();
         }
     };
 
@@ -175,11 +183,11 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
         if (downloadStopped) break;
         let pageContent = await fetchPage(bookId, page, "epub");
         if (pageContent === undefined) {
-            setError(`Ошибка при скачивании страницы`);
-            chrome.runtime.sendMessage({action: "stopDownload" })
-            return;
-        } 
+            setError(`Скачивание прервано на странице ${page}`);
+            break;
+        }
         worker.postMessage({ action: "addPageEPUB", text: pageContent });
+        pagesQueuedCount++;
     }
 
     allPagesQueued = true;
@@ -193,14 +201,20 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
     let downloadStopped = false;
     let allPagesQueued = false;
     let finalizeRequested = false;
+    let pagesQueuedCount = 0;
 
     const tryFinalizePDF = () => {
-        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === totalPages) {
+        if (!finalizeRequested && allPagesQueued && !downloadStopped && processedPages === pagesQueuedCount) {
+            if (pagesQueuedCount === 0) {
+                chrome.runtime.sendMessage({ action: "stopDownload" });
+                worker.terminate();
+                return;
+            }
             finalizeRequested = true;
             worker.postMessage({ action: "finalizePDF" });
         }
     };
-    
+
     worker.onmessage = (e) => {
         if (e.data.action === "pageAdded") {
             processedPages++;
@@ -215,11 +229,13 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
             link.download = `${bookTitle}.pdf`;
             link.click();
             chrome.runtime.sendMessage({ action: "stopDownload" });
+            worker.terminate();
         } else if (e.data.action === "error") {
             setError(`Ошибка при скачивании страницы`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
             finalizeRequested = true;
+            worker.terminate();
         }
     };
 
@@ -227,16 +243,16 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
         if (downloadStopped) break;
         let pageContent = await fetchPage(bookId, page, "pdf");
         if (pageContent === undefined) {
-            setError(`Ошибка в воркере PDF`);
-            chrome.runtime.sendMessage({action: "stopDownload" })
-            return;
-        } 
+            setError(`Скачивание прервано на странице ${page}`);
+            break;
+        }
         worker.postMessage({
             action: "addPagePDF",
             svgData: pageContent,
             key: decryptionKey,
             pageNumber: page
         });
+        pagesQueuedCount++;
     }
     allPagesQueued = true;
     tryFinalizePDF();
