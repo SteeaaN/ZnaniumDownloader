@@ -3,6 +3,13 @@
 
 ## Установка (только браузеры на Chromium)
 
+👉 **[Установить из Chrome Web Store](https://chromewebstore.google.com/detail/znanium-downloader/nbeacgfllenjcnlliihklggcmamoenmn)**
+
+<details>
+<summary>⚙️ <b>Ручная установка (из исходников)</b></summary>
+
+<br>
+
 <details>
 <summary>📱 Для мобильных устройств (Kiwi Browser и др.)</summary>
 
@@ -22,6 +29,8 @@
 4. Включить режим разработчика
 5. Включить опцию **Разрешить расширения из других магазинов**
 6. Нажать **Загрузить распакованное** и выбрать папку с распакованным архивом
+
+</details>
 
 </details>
 
