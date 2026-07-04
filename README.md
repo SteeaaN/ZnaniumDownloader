@@ -10,6 +10,10 @@
 ## Установка (только браузеры на Chromium)
 
 👉 **[Установить из Chrome Web Store](https://chromewebstore.google.com/detail/znanium-downloader/nbeacgfllenjcnlliihklggcmamoenmn)**
+
+📱 **Android:** Стандартный Google Chrome не поддерживает расширения. Используйте **Kiwi Browser**, **Lemur Browser** или **Яндекс Браузер**.
+
+🍏 **iOS:** Установка невозможна из-за системных ограничений Apple.
 > ⭐ **Понравилось расширение?** Буду очень благодарен за оценку и небольшой текстовый отзыв в Chrome Web Store. Это невероятно помогает проекту подниматься в поиске!
 
 <details>
