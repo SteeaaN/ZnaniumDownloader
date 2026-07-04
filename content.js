@@ -171,7 +171,8 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
             finalizeRequested = true;
             worker.terminate();
         } else if (e.data.action === "error") {
-            setError(`Ошибка в воркере EPUB`);
+            console.error("Worker error EPUB:", e.data.error);
+            setError(`Ошибка в воркере EPUB: ${e.data.error || 'неизвестная ошибка'}`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
             finalizeRequested = true;
@@ -196,7 +197,7 @@ async function downloadEPUB(startPage, endPage, bookTitle, bookId, totalPages, w
 
 async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, worker, processedPages) {
     const decryptionKey = getDecryptionKey();
-    worker.postMessage({ action: "initPDF", bookTitle, wasmUrl: chrome.runtime.getURL("decryptSVG.wasm") });
+    worker.postMessage({ action: "initPDF", bookTitle });
 
     let downloadStopped = false;
     let allPagesQueued = false;
@@ -231,7 +232,8 @@ async function downloadPDF(startPage, endPage, bookTitle, bookId, totalPages, wo
             chrome.runtime.sendMessage({ action: "stopDownload" });
             worker.terminate();
         } else if (e.data.action === "error") {
-            setError(`Ошибка при скачивании страницы`);
+            console.error("Worker error PDF:", e.data.error);
+            setError(`Ошибка при скачивании страницы: ${e.data.error || 'неизвестная ошибка'}`);
             chrome.runtime.sendMessage({ action: "stopDownload" });
             downloadStopped = true;
             finalizeRequested = true;
