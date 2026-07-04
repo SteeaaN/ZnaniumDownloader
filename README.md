@@ -1,9 +1,16 @@
+<p align="center">
+  <img src="https://img.shields.io/github/stars/SteeaaN/ZnaniumDownloader?label=%D0%97%D0%B2%D0%B5%D0%B7%D0%B4%D1%8B&color=yellow"> <img src="https://img.shields.io/github/last-commit/SteeaaN/ZnaniumDownloader?label=%D0%9E%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BE&color=blue"> <img src="https://img.shields.io/github/repo-size/SteeaaN/ZnaniumDownloader?label=%D0%92%D0%B5%D1%81&color=orange"> <img src="https://img.shields.io/github/license/SteeaaN/ZnaniumDownloader?label=%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F&color=blue">
+  <br><br>
+  <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/users/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%A3%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B8&color=success" alt="Установки"></a> <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/v/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%92%D0%B5%D1%80%D1%81%D0%B8%D1%8F" alt="Версия"></a> <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/rating/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%A0%D0%B5%D0%B9%D1%82%D0%B8%D0%BD%D0%B3" alt="Рейтинг"></a>
+</p>
+
 > ⚠️ Расширение предназначено исключительно для личного использования и сохранения материалов, на которые у пользователя есть законные права доступа. Автор не несёт ответственности за использование расширения в целях, нарушающих законодательство об авторских правах.
 
 
 ## Установка (только браузеры на Chromium)
 
 👉 **[Установить из Chrome Web Store](https://chromewebstore.google.com/detail/znanium-downloader/nbeacgfllenjcnlliihklggcmamoenmn)**
+> ⭐ **Понравилось расширение?** Буду очень благодарен за оценку и небольшой текстовый отзыв в Chrome Web Store. Это невероятно помогает проекту подниматься в поиске!
 
 <details>
 <summary>⚙️ <b>Ручная установка (из исходников)</b></summary>
