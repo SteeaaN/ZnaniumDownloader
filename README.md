@@ -13,7 +13,7 @@
 
 📱 **Android:** Стандартный Google Chrome не поддерживает расширения. Используйте **Kiwi Browser**, **Lemur Browser** или **Яндекс Браузер**.
 
-🍏 **iOS:** Только **Orion Browser**, не тестировалось, возможны баги.
+🍏 **iOS:** Только **Orion Browser by Kagi**.
 
 > ⭐ **Понравилось расширение?** Буду очень благодарен за оценку и небольшой текстовый отзыв в Chrome Web Store. Это невероятно помогает проекту подниматься в поиске!
 
@@ -69,8 +69,40 @@
 
 Расшифровка SVG написана на C для повышения производительности. Исходный код находится в `/wasm_src`.
 
-**Требования:** [Emscripten SDK](https://emscripten.org/)
+Для обхода ограничений платформы iOS (Safari/WKWebView), где загрузка бинарных файлов через `fetch` в расширениях заблокирована, скомпилированный модуль `decryptSVG.wasm` автоматически конвертируется в строку Base64 и встраивается прямо в начало файла `worker.js` (в константу `DECRYPT_SVG_WASM_BASE64`).
 
-**Команда сборки:**
+**Требования:**
+- [Emscripten SDK](https://emscripten.org/)
+- [Node.js](https://nodejs.org/)
+
+**Windows:**
+- Запуск из корня проекта:
+  ```cmd
+  wasm_src\build.bat
+  ```
+- Запуск из папки `wasm_src`:
+  ```cmd
+  cd wasm_src && build.bat
+  ```
+
+**Linux / macOS:**
+- Запуск из корня проекта:
+  ```bash
+  ./wasm_src/build.sh
+  ```
+- Запуск из папки `wasm_src`:
+  ```bash
+  cd wasm_src && ./build.sh
+  ```
+
+### 🔄 Ручное обновление строки WASM (без перекомпиляции C-кода)
+Если у вас уже есть готовый файл `decryptSVG.wasm` и вы хотите просто обновить константу `DECRYPT_SVG_WASM_BASE64` в файле `worker.js`, запустите скрипт обновления:
+
+- **Windows:** `wasm_src\update_wasm.bat` (или `node wasm_src/update_wasm.js`)
+- **Linux / macOS:** `./wasm_src/update_wasm.sh` (или `node wasm_src/update_wasm.js`)
+
+**Ручная команда компиляции Emscripten:**
 ```bash
 emcc DecryptSVG.c -o ../decryptSVG.wasm -O3 --no-entry -s EXPORTED_FUNCTIONS="['_decryptSVG', '_freeMemory', '_malloc', '_free']"
+```
+</details>
