@@ -1,7 +1,26 @@
+<p align="center">
+  <img src="https://img.shields.io/github/stars/SteeaaN/ZnaniumDownloader?label=%D0%97%D0%B2%D0%B5%D0%B7%D0%B4%D1%8B&color=yellow"> <img src="https://img.shields.io/github/last-commit/SteeaaN/ZnaniumDownloader?label=%D0%9E%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BE&color=blue"> <img src="https://img.shields.io/github/repo-size/SteeaaN/ZnaniumDownloader?label=%D0%92%D0%B5%D1%81&color=orange"> <img src="https://img.shields.io/github/license/SteeaaN/ZnaniumDownloader?label=%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F&color=blue">
+  <br><br>
+  <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/users/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%A3%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B8&color=success" alt="Установки"></a> <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/v/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%92%D0%B5%D1%80%D1%81%D0%B8%D1%8F" alt="Версия"></a> <a href="https://chromewebstore.google.com/detail/nbeacgfllenjcnlliihklggcmamoenmn"><img src="https://img.shields.io/chrome-web-store/rating/nbeacgfllenjcnlliihklggcmamoenmn?label=%D0%A0%D0%B5%D0%B9%D1%82%D0%B8%D0%BD%D0%B3" alt="Рейтинг"></a>
+</p>
+
 > ⚠️ Расширение предназначено исключительно для личного использования и сохранения материалов, на которые у пользователя есть законные права доступа. Автор не несёт ответственности за использование расширения в целях, нарушающих законодательство об авторских правах.
 
 
 ## Установка (только браузеры на Chromium)
+
+👉 **[Установить из Chrome Web Store](https://chromewebstore.google.com/detail/znanium-downloader/nbeacgfllenjcnlliihklggcmamoenmn)**
+
+📱 **Android:** Стандартный Google Chrome не поддерживает расширения. Используйте **Kiwi Browser**, **Lemur Browser** или **Яндекс Браузер**.
+
+🍏 **iOS:** Только **Orion Browser by Kagi**.
+
+> ⭐ **Понравилось расширение?** Буду очень благодарен за оценку и небольшой текстовый отзыв в Chrome Web Store. Это невероятно помогает проекту подниматься в поиске!
+
+<details>
+<summary>⚙️ <b>Ручная установка (из исходников)</b></summary>
+
+<br>
 
 <details>
 <summary>📱 Для мобильных устройств (Kiwi Browser и др.)</summary>
@@ -22,6 +41,8 @@
 4. Включить режим разработчика
 5. Включить опцию **Разрешить расширения из других магазинов**
 6. Нажать **Загрузить распакованное** и выбрать папку с распакованным архивом
+
+</details>
 
 </details>
 
@@ -48,8 +69,40 @@
 
 Расшифровка SVG написана на C для повышения производительности. Исходный код находится в `/wasm_src`.
 
-**Требования:** [Emscripten SDK](https://emscripten.org/)
+Для обхода ограничений платформы iOS (Safari/WKWebView), где загрузка бинарных файлов через `fetch` в расширениях заблокирована, скомпилированный модуль `decryptSVG.wasm` автоматически конвертируется в строку Base64 и встраивается прямо в начало файла `worker.js` (в константу `DECRYPT_SVG_WASM_BASE64`).
 
-**Команда сборки:**
+**Требования:**
+- [Emscripten SDK](https://emscripten.org/)
+- [Node.js](https://nodejs.org/)
+
+**Windows:**
+- Запуск из корня проекта:
+  ```cmd
+  wasm_src\build.bat
+  ```
+- Запуск из папки `wasm_src`:
+  ```cmd
+  cd wasm_src && build.bat
+  ```
+
+**Linux / macOS:**
+- Запуск из корня проекта:
+  ```bash
+  ./wasm_src/build.sh
+  ```
+- Запуск из папки `wasm_src`:
+  ```bash
+  cd wasm_src && ./build.sh
+  ```
+
+### 🔄 Ручное обновление строки WASM (без перекомпиляции C-кода)
+Если у вас уже есть готовый файл `decryptSVG.wasm` и вы хотите просто обновить константу `DECRYPT_SVG_WASM_BASE64` в файле `worker.js`, запустите скрипт обновления:
+
+- **Windows:** `wasm_src\update_wasm.bat` (или `node wasm_src/update_wasm.js`)
+- **Linux / macOS:** `./wasm_src/update_wasm.sh` (или `node wasm_src/update_wasm.js`)
+
+**Ручная команда компиляции Emscripten:**
 ```bash
 emcc DecryptSVG.c -o ../decryptSVG.wasm -O3 --no-entry -s EXPORTED_FUNCTIONS="['_decryptSVG', '_freeMemory', '_malloc', '_free']"
+```
+</details>
